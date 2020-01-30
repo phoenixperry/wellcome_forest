@@ -4,7 +4,7 @@
 // Trees have IDs 3-10
 
 // declare constants
-int TIME_BETWEEN_UPDATES = 250;
+int TIME_BETWEEN_UPDATES = 50;
 int ID = 3;
 
 // declare variables
