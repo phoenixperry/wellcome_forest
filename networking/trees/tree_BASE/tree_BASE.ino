@@ -62,10 +62,10 @@ void readServerState(){
         victory = (bool) updateSubstring[1];
         resetGame = (bool) updateSubstring[2];
 
-        Serial.print("Hut received " + updateSubstring + "And updated victory to: ");
-        Serial.print(victory);
-        Serial.print(" and resetGame to ");
-        Serial.println(resetGame);
+//        Serial.print("Hut received " + updateSubstring + "And updated victory to: ");
+//        Serial.print(victory);
+//        Serial.print(" and resetGame to ");
+//        Serial.println(resetGame);
         
       }else{
         Serial.flush();

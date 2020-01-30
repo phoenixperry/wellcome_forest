@@ -81,7 +81,7 @@ void readServerState(){
       int strSize = updateFromServerString.length();
       if((strSize==(2+NUM_STATES*(NUM_TREES+NUM_HUTS+NUM_CLOUDS))) && (updateFromServerString.indexOf('{')==0) && (updateFromServerString.indexOf('}')==(2+NUM_STATES*(NUM_TREES+NUM_HUTS+NUM_CLOUDS)-1))){
         Serial1.println(updateFromServerString);
-        Serial.println(updateFromServerString);
+//        Serial.println(updateFromServerString);
       }else{
         Serial.flush();
         Serial1.flush();
