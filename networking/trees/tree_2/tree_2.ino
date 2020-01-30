@@ -19,6 +19,7 @@ String updateSubstring;
 String updateFromServerString;
 // For managing local state.
 int lastUpdate;
+int currentTime;
 
 int lightPin = 11;
 
@@ -48,13 +49,13 @@ void readServerState(){
       updateFromServerString.trim();
       int strSize = updateFromServerString.length();
       if((strSize==(2+NUM_STATES*NUM_OBJECTS) && (updateFromServerString.indexOf('{')==0) && (updateFromServerString.indexOf('}')==(2+NUM_STATES*NUM_OBJECTS-1)))){
+        
         // extract substring for this object
         updateStringStartIndex = updateFromServerString.indexOf(ID);  // find which part of the string belongs to this object
         updateStringEndIndex = updateStringStartIndex + NUM_STATES;  // find the end by moving over as many places as we expect there to be pieces of data.
         updateSubstring = updateFromServerString.substring(updateStringStartIndex,updateStringEndIndex);  // get the substring.
 
-        
-        
+
         // Update the object parameters into local state. 
         victory = (bool) updateSubstring[1];
         resetGame = (bool) updateSubstring[2];
@@ -89,9 +90,10 @@ void loop() {
   // put your main code here, to run repeatedly:
   readServerState();
   // testServerInput();
-  if(millis()-lastUpdate > TIME_BETWEEN_UPDATES){
+  currentTime = millis();
+  if(currentTime-lastUpdate > TIME_BETWEEN_UPDATES){
     sendState();
-    lastUpdate = millis();
+    lastUpdate = currentTime;
   }
 
 }

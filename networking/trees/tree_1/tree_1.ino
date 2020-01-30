@@ -19,6 +19,7 @@ String updateSubstring;
 String updateFromServerString;
 // For managing local state.
 int lastUpdate;
+int currentTime;
 
 int lightPin = 11;
 
@@ -89,9 +90,10 @@ void loop() {
   // put your main code here, to run repeatedly:
   readServerState();
 //  testServerInput();
-  if(millis()-lastUpdate > TIME_BETWEEN_UPDATES){
+  currentTime = millis();
+  if(currentTime-lastUpdate > TIME_BETWEEN_UPDATES){
     sendState();
-    lastUpdate = millis();
+    lastUpdate = currentTime;
   }
 
 }

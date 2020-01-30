@@ -19,8 +19,10 @@ String updateSubstring;
 String updateFromServerString;
 // For managing local state.
 int lastUpdate;
+int currentTime;
 
-int lightPin = 11;
+int lightPin = 11;  // for testing
+
 
 void setup() {
   Serial1.begin(9600);
@@ -28,12 +30,14 @@ void setup() {
   digitalWrite(lightPin, LOW);
 }
 
+
 void sendState(){
   Serial1.print("{");
   Serial1.print(ID);
   Serial1.print(playing);
   Serial1.println("}");
 }
+
 
 void readServerState(){
   if(Serial1.available()){
@@ -74,6 +78,7 @@ void readServerState(){
   }
 }
 
+
 void testServerInput(){
   // it turns on an LED when Victory is positive. Just to prove that it's actually receiving and updating in an "embodied" way.
   if (victory && resetGame){
@@ -85,13 +90,14 @@ void testServerInput(){
   }
 }
 
+
 void loop() {
   // put your main code here, to run repeatedly:
   readServerState();
-  testServerInput();
-  if(millis()-lastUpdate > TIME_BETWEEN_UPDATES){
+  // testServerInput();
+  currentTime = millis();
+  if(currentTime-lastUpdate > TIME_BETWEEN_UPDATES){
     sendState();
-    lastUpdate = millis();
+    lastUpdate = currentTime;
   }
-
 }
