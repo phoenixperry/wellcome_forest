@@ -75,9 +75,10 @@ void readServerState(){
 }
 
 void testServerInput(){
-  // it turns on an LED when Victory is positive.
-  if (victory){
+  // it turns on an LED when Victory is positive. Just to prove that it's actually receiving and updating in an "embodied" way.
+  if (victory && resetGame){
     digitalWrite(lightPin, HIGH);
+    victory = false;
     delay(1000);
     digitalWrite(lightPin,LOW);
     delay(1000);
@@ -90,6 +91,7 @@ void loop() {
   testServerInput();
   if(millis()-lastUpdate > TIME_BETWEEN_UPDATES){
     sendState();
+    lastUpdate = millis();
   }
 
 }
