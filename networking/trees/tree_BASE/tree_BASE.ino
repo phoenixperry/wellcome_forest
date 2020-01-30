@@ -1,36 +1,95 @@
-#include <ArduinoJson.h>
-
 // Trees are on Leonardos
-// Trees have IDs 3-10
+// TREES have IDs 3-10 and run on Arduino Leonardos
 
-// declare constants
-int TIME_BETWEEN_UPDATES = 50;
-int ID = 3;
+// Constants
+int TIME_BETWEEN_UPDATES = 200;
+int ID = 3;  // index[0] in all communications
+int NUM_OBJECTS = 11;  // how many objects are in the ecosystem
+int NUM_STATES = 3;  // how many states will be updated for all objects - all the same at this point
 
-// declare variables
-String updateServerString = "";
+// Variables
+// For sending to server:
+bool playing = 0;  
+// For updating from server:
+bool victory = 0;  // index[1]
+bool resetGame = 0;  // index[2]
+int updateStringStartIndex = 0;
+int updateStringEndIndex = 0;
+String updateSubstring;
+String updateFromServerString;
+// For managing local state.
+int lastUpdate;
 
-StaticJsonDocument<JSON_OBJECT_SIZE(4)> sendToServerDoc;
+int lightPin = 11;
 
 void setup() {
   Serial1.begin(9600);
+  pinMode(lightPin, OUTPUT);
+  digitalWrite(lightPin, LOW);
 }
 
 void sendState(){
+  Serial1.print("{");
+  Serial1.print(ID);
+  Serial1.print(playing);
+  Serial1.println("}");
+}
 
-  sendToServerDoc["id"].set(ID);
-  sendToServerDoc["lit"].set(false);
-  sendToServerDoc["brightness"].set(47);
-  sendToServerDoc["victory"].set(false);
-  
-  // Cast the JsonVariant to a string and send it over serial.
-  updateServerString = ""+sendToServerDoc.as<String>();
-  Serial1.println(updateServerString);
+void readServerState(){
+  if(Serial1.available()){
+    char ch;
+    String cha;
+    ch = (char) Serial1.read();
+    cha = (String) ch;
+    if (cha == "{"){
+      updateFromServerString = cha;
+    }else if(cha == "\n"){
+      updateFromServerString = updateFromServerString + cha;
+      updateFromServerString.trim();
+      int strSize = updateFromServerString.length();
+      if((strSize==(2+NUM_STATES*NUM_OBJECTS) && (updateFromServerString.indexOf('{')==0) && (updateFromServerString.indexOf('}')==(2+NUM_STATES*NUM_OBJECTS-1)))){
+        // extract substring for this object
+        updateStringStartIndex = updateFromServerString.indexOf(ID);  // find which part of the string belongs to this object
+        updateStringEndIndex = updateStringStartIndex + NUM_STATES;  // find the end by moving over as many places as we expect there to be pieces of data.
+        updateSubstring = updateFromServerString.substring(updateStringStartIndex,updateStringEndIndex);  // get the substring.
+
+        
+        
+        // Update the object parameters into local state. 
+        victory = (bool) updateSubstring[1];
+        resetGame = (bool) updateSubstring[2];
+
+        Serial.print("Hut received " + updateSubstring + "And updated victory to: ");
+        Serial.print(victory);
+        Serial.print(" and resetGame to ");
+        Serial.println(resetGame);
+        
+      }else{
+        Serial.flush();
+        Serial1.flush();
+      }
+    }else{
+      updateFromServerString = updateFromServerString + cha;
+    }
+  }
+}
+
+void testServerInput(){
+  // it turns on an LED when Victory is positive.
+  if (victory){
+    digitalWrite(lightPin, HIGH);
+    delay(1000);
+    digitalWrite(lightPin,LOW);
+    delay(1000);
+  }
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-  sendState();
-  delay(TIME_BETWEEN_UPDATES);
+  readServerState();
+  testServerInput();
+  if(millis()-lastUpdate > TIME_BETWEEN_UPDATES){
+    sendState();
+  }
 
 }
