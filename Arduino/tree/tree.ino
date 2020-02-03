@@ -2,10 +2,11 @@
 #ifdef __AVR__
 #include <avr/power.h> // Required for 16 MHz Adafruit Trinket
 #endif
+#include "hsv.h"
 
 #define LED_PIN 10
 #define LED_COUNT 16
-#define BRIGHTNESS 100
+#define BRIGHTNESS 255
 
 #define BUTTON_LED 11
 #define BUTTON_OUT 12
@@ -41,6 +42,7 @@ void setup()
 }
 
 float col[3];
+float hueDefault = 0.0;
 
 void loop()
 {
@@ -53,26 +55,12 @@ void loop()
   // rainbow
   if (buttonPressed)
   {
-    for (int i = 0; i < 4; i++)
+    for (int i = 0; i < strip.numPixels(); i++)
     {
-      strip.setPixelColor(i, strip.Color(255, i * 64, 0));
-      strip.show();
+      int hue = i * 255 * 6 / strip.numPixels();
+      strip.setPixelColor(i, hsv2rgb(hue, 255, 255));
     }
-    for (int i = 0; i < 4; i++)
-    {
-      strip.setPixelColor(4 + i, strip.Color(255 - i * 64, 255, 0));
-      strip.show();
-    }
-    for (int i = 0; i < 4; i++)
-    {
-      strip.setPixelColor(8 + i, strip.Color(0, 255, i * 64));
-      strip.show();
-    }
-    for (int i = 0; i < 4; i++)
-    {
-      strip.setPixelColor(12 + i, strip.Color(0, 255 - i * 64, 255));
-      strip.show();
-    }
+    strip.show();
 
     delay(1000);
     for (float i = 0; i < PI / 2 + 0.01; i += 0.005)
@@ -89,40 +77,13 @@ void loop()
   {
     for (int i = 0; i < strip.numPixels(); i++)
     {
-      strip.setPixelColor(i, strip.Color(0, 255, 0));
+      strip.setPixelColor(i, hsv2rgb(hueDefault, 255, 255));
       strip.show();
+      hueDefault += 0.2;
+      if (hueDefault > 255 * 6)
+      {
+        hueDefault = 0.0;
+      }
     }
   }
-}
-
-float fract(float x) { return x - int(x); }
-
-float mix(float a, float b, float t) { return a + (b - a) * t; }
-
-float step(float e, float x) { return x < e ? 0.0 : 1.0; }
-
-float *hsv2rgb(float h, float s, float b, float *rgb)
-{
-  rgb[0] = b * mix(1.0, constrain(abs(fract(h + 1.0) * 6.0 - 3.0) - 1.0, 0.0, 1.0), s);
-  rgb[1] = b * mix(1.0, constrain(abs(fract(h + 0.6666666) * 6.0 - 3.0) - 1.0, 0.0, 1.0), s);
-  rgb[2] = b * mix(1.0, constrain(abs(fract(h + 0.3333333) * 6.0 - 3.0) - 1.0, 0.0, 1.0), s);
-  return rgb;
-}
-
-float *rgb2hsv(float r, float g, float b, float *hsv)
-{
-  float s = step(b, g);
-  float px = mix(b, g, s);
-  float py = mix(g, b, s);
-  float pz = mix(-1.0, 0.0, s);
-  float pw = mix(0.6666666, -0.3333333, s);
-  s = step(px, r);
-  float qx = mix(px, r, s);
-  float qz = mix(pw, pz, s);
-  float qw = mix(r, px, s);
-  float d = qx - min(qw, py);
-  hsv[0] = abs(qz + (qw - py) / (6.0 * d + 1e-10));
-  hsv[1] = d / (qx + 1e-10);
-  hsv[2] = qx;
-  return hsv;
 }
