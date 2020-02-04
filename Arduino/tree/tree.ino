@@ -12,7 +12,7 @@
 CRGB leds[LED_COUNT];
 bool button_pressed = false;
 char tree_id = 'C'; // int from C - J; C is the starting tree
-uint16_t t = 0;
+uint16_t time = 0;  // timer used for animations
 
 enum Color
 {
@@ -38,19 +38,26 @@ void setup()
   digitalWrite(BUTTON_LED, HIGH);
 }
 
+void setHSV(float h, float s, float v)
+{
+  FastLED.showColor(CHSV(h, s, v));
+}
+
 void loop()
 {
-  t++;
+  /*--- IDLE STATE ---*/
   if (current_state == idle)
   {
-    FastLED.showColor(CHSV(100, 255, 255));
+    setHSV(100, 255, 255);
   }
+  /*--- BEACON STATE ---*/
   else if (current_state == beacon)
   {
     if (!button_pressed)
     {
       // beacon animation
-      FastLED.showColor(CHSV(20 + abs(sin(t * 0.005)) * 60, 240, 240));
+      time++;
+      setHSV(20 + abs(sin(time * 0.005)) * 60, 240, 240);
       // handle button press
       if (digitalRead(BUTTON_IN) == LOW)
       {
@@ -60,8 +67,12 @@ void loop()
     }
     else
     {
-      // stop blinking
-      FastLED.showColor(CHSV(20, 255, 255));
+      // reset to orange
+      setHSV(20, 255, 255);
     }
   }
+  /*--- WAITING STATE ---*/
+  /*--- FAIL STATE ---*/
+  /*--- WIN STATE ---*/
+  /*--- WIN_GLOBAL STATE ---*/
 }
