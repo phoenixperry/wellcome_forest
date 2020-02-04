@@ -50,9 +50,27 @@ void set_hsv(double h, double s, double v)
 }
 
 bool is_button_pressed() { return digitalRead(BUTTON_IN) == LOW; }
+bool is_valid_msg(String msg) { return msg.startsWith("{") && msg.endsWith("}"); }
+// talk to networking to see if this is correct:
+String get_tree_id(String msg) { return String(msg.charAt(2)); }
 
 void loop()
 {
+
+  /*--- PARSE STATE TRANSITIONS ---*/
+  while (Serial.available())
+  {
+    String msg = Serial.readStringUntil('\n');
+    if (is_valid_msg(msg))
+    {
+      String id = get_tree_id(msg);
+      if (tree_id == id)
+      {
+        Serial.println("you selected this tree!");
+      }
+    }
+  }
+
   time++;
   /*--- IDLE STATE ---*/
   if (current_state == idle)
