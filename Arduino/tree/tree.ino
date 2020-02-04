@@ -1,4 +1,5 @@
 #include "FastLED.h"
+#include "AsyncDelay.h"
 
 #define LED_PIN 10
 #define LED_COUNT 32
@@ -9,9 +10,10 @@
 #define BUTTON_IN 13
 
 CRGB leds[LED_COUNT];
-bool button_pressed = false;
-String tree_id = "C"; // int from C - J; C is the starting tree
+bool button_was_pressed = false;
+String tree_id = "D"; // int from C - J; C is the starting tree
 uint16_t time = 0;    // timer used for animations
+AsyncDelay asyncDelay;
 
 enum State
 {
@@ -47,32 +49,47 @@ void setHSV(double h, double s, double v)
   FastLED.showColor(CHSV(h, s, v));
 }
 
+bool is_button_pressed() { return digitalRead(BUTTON_IN) == LOW; }
+
 void loop()
 {
   time++;
   /*--- IDLE STATE ---*/
   if (current_state == idle)
   {
-    hue = 100;
     double speed = 0.002;
     double saturation = 150 + abs(sin(time * speed)) * 50;
     double value = 255 - abs(cos(time * speed)) * 55;
+    if (is_button_pressed())
+    {
+      button_was_pressed = true;
+      asyncDelay.start(3000, AsyncDelay::MILLIS);
+      time = 0;
+    }
+    if (button_was_pressed)
+    {
+      saturation = 255 - time * 0.05;
+      if (asyncDelay.isExpired())
+      {
+        button_was_pressed = false;
+      }
+    }
     setHSV(hue, saturation, value);
   }
   /*--- BEACON STATE ---*/
   else if (current_state == beacon)
   {
-    if (!button_pressed)
+    if (!button_was_pressed)
     {
       // beacon animation
       hue = -sin(time * 0.007) * 30 + 50;
       double value = 220 + sin(time * 0.007) * 35;
       setHSV(hue, 255, value);
       // handle button press
-      if (digitalRead(BUTTON_IN) == LOW)
+      if (is_button_pressed())
       {
         Serial.println(tree_id + " pressed");
-        button_pressed = true;
+        button_was_pressed = true;
       }
     }
     else
