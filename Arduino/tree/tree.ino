@@ -24,7 +24,10 @@ enum Color
   fail
 };
 
-Color current_state = tree_id == 'C' ? beacon : idle;
+bool is_beacon = tree_id == 'C';
+
+Color current_state = is_beacon ? beacon : idle;
+double hue = is_beacon ? 20.0 : 100.0;
 
 void setup()
 {
@@ -38,7 +41,7 @@ void setup()
   digitalWrite(BUTTON_LED, HIGH);
 }
 
-void setHSV(float h, float s, float v)
+void setHSV(double h, double s, double v)
 {
   FastLED.showColor(CHSV(h, s, v));
 }
@@ -57,7 +60,8 @@ void loop()
     {
       // beacon animation
       time++;
-      setHSV(20 + abs(sin(time * 0.005)) * 60, 240, 240);
+      hue = sin(time * 0.007) * 30 + 50;
+      setHSV(hue, 255, 255);
       // handle button press
       if (digitalRead(BUTTON_IN) == LOW)
       {
@@ -67,8 +71,9 @@ void loop()
     }
     else
     {
-      // reset to orange
-      setHSV(20, 255, 255);
+      // smoothly reset to orange
+      hue = hue > 20 ? hue - 0.2 : 20.;
+      setHSV(hue, 255, 255);
     }
   }
   /*--- WAITING STATE ---*/
