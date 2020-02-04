@@ -11,7 +11,7 @@ if __name__ == "__main__":
     while True:
         radio_state = ser.readline()
         if radio_state:
-            print(radio_state.decode('utf-8'))
+            print(radio_state)
         # if (time.time()-last_update)>time_between_updates:
         #     last_update = time.time()
         #     ser.write('{111211311411511611711811911A11B11}\n'.encode('utf-8'))  # update the full state for devices 1-B. Length is 3 + num_states*num_devices. Currently 36.
