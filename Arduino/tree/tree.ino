@@ -2,7 +2,7 @@
 #include "AsyncDelay.h"
 
 #define LED_PIN 10
-#define LED_COUNT 16
+#define LED_COUNT 32
 #define BRIGHTNESS 255
 
 #define BUTTON_LED 11
@@ -10,9 +10,21 @@
 #define BUTTON_IN 13
 
 CRGB leds[LED_COUNT];
-AsyncDelay press_delay;
-float hue = 0.0;
 bool button_pressed = false;
+char tree_id = 'C'; // int from C - J; C is the starting tree
+uint16_t t = 0;
+
+enum Color
+{
+  idle,
+  beacon,
+  win,
+  win_global,
+  waiting,
+  fail
+};
+
+Color current_state = tree_id == 'C' ? beacon : idle;
 
 void setup()
 {
@@ -28,23 +40,28 @@ void setup()
 
 void loop()
 {
-  if (button_pressed)
+  t++;
+  if (current_state == idle)
   {
-    hue = hue > 255 ? 0.0 : hue += 0.2;
-    FastLED.showColor(CHSV(hue, 255, 255));
-    if (press_delay.isExpired())
-    {
-      hue = 0.0;
-      button_pressed = false;
-    }
+    FastLED.showColor(CHSV(100, 255, 255));
   }
-  else
+  else if (current_state == beacon)
   {
-    digitalWrite(BUTTON_LED, HIGH);
-    if (digitalRead(BUTTON_IN) == LOW)
+    if (!button_pressed)
     {
-      button_pressed = true;
-      press_delay.start(3000, AsyncDelay::MILLIS);
+      // beacon animation
+      FastLED.showColor(CHSV(20 + abs(sin(t * 0.005)) * 60, 240, 240));
+      // handle button press
+      if (digitalRead(BUTTON_IN) == LOW)
+      {
+        button_pressed = true;
+        Serial.println();
+      }
+    }
+    else
+    {
+      // stop blinking
+      FastLED.showColor(CHSV(20, 255, 255));
     }
   }
 }
