@@ -44,7 +44,7 @@ void setup()
   digitalWrite(BUTTON_LED, HIGH);
 }
 
-void setHSV(double h, double s, double v)
+void set_hsv(double h, double s, double v)
 {
   FastLED.showColor(CHSV(h, s, v));
 }
@@ -74,7 +74,7 @@ void loop()
         button_was_pressed = false;
       }
     }
-    setHSV(hue, saturation, value);
+    set_hsv(hue, saturation, value);
   }
   /*--- BEACON STATE ---*/
   else if (current_state == beacon)
@@ -84,7 +84,7 @@ void loop()
       // beacon animation
       hue = -sin(time * 0.007) * 30 + 50;
       double value = 220 + sin(time * 0.007) * 35;
-      setHSV(hue, 255, value);
+      set_hsv(hue, 255, value);
       // handle button press
       if (is_button_pressed())
       {
@@ -96,7 +96,7 @@ void loop()
     {
       // smoothly reset to orange
       hue = hue > 20 ? hue - 0.2 : 20.;
-      setHSV(hue, 255, 255);
+      set_hsv(hue, 255, 255);
     }
   }
   /*--- WAITING STATE ---*/
@@ -106,7 +106,7 @@ void loop()
   /*--- FAIL STATE ---*/
   if (current_state == fail)
   {
-    setHSV(hue, 240, 200);
+    set_hsv(hue, 240, 200);
   }
   /*--- WIN STATE ---*/
   /*--- WIN_GLOBAL STATE ---*/
