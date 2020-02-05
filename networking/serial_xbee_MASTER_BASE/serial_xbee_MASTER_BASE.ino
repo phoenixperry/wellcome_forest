@@ -1,7 +1,7 @@
 // This master lives with the laptop and feeds Unity with all the info it needs. It also sends out lovely data to the trees, clouds, and yurt!
 
 // Declare constants.
-int TIME_BETWEEN_SLAVE_UPDATES = 100;
+int TIME_BETWEEN_SLAVE_UPDATES = 50;
 int NUM_TREES = 8;
 int NUM_HUTS = 1;
 int NUM_CLOUDS = 2;
@@ -69,11 +69,10 @@ bool t8_local_win = 0;
 //bool trees_wins[8] = {}
 //bool trees_beacons[8] = {}
 
-// probably want to refactor these states into a struct. At least the ones to send to server/slaves.
-
 // Hut ID K
 bool hut_state = 0;  // idle/playing/win/lose (0,1,2,3)
 
+// YES I SHOULD DO A MORE CLEVER WAY TO MANAGE STATES.
 
 void setup() {
   //Begin serial monitor port - this is the cable.
@@ -239,18 +238,21 @@ void updateSlaves() {
 
 void updateServer() {
   // This method sends over radio the state string
-  // {0A10} {tree state, trees beacon, hut state, weather state}
+  // {0C10C0} {tree state, trees beacon, hut state, weather state, trees_button, hut_button}
   Serial.print("{");
   Serial.print(trees_state);
   Serial.print(trees_current_beacon);
   Serial.print(hut_state);
   Serial.print(weather_state);
+  Serial.print(trees_button);
+  Serial.print(hut_button);
   Serial.println("}");
 }
 
 
 void readServerStateUntil() {
-  // This reads the state from Unity/ laptop over the Serial port
+  // This reads the state from Unity/ laptop over the Serial port.
+  // TODO: UPDATE THIS BASED ON SERVER -> MASTER ARD STRING
   if (Serial.available()) {
     String updateFromServerString = Serial.readStringUntil('\n');
     updateFromServerString.trim();  // trim that newline off
