@@ -1,13 +1,13 @@
 // This master lives with the laptop and feeds Unity with all the info it needs. It also sends out lovely data to the trees, clouds, and yurt!
 
 // Declare constants.
-int TIME_BETWEEN_SLAVE_UPDATES = 50;
+int TIME_BETWEEN_SLAVE_UPDATES = 100;
 int NUM_TREES = 8;
 int NUM_HUTS = 1;
 int NUM_CLOUDS = 2;
 int NUM_STATES = 1;  // number of states for each slave
 int NUM_GLOBAL_STATES = 3;
-int ID = 0;
+char ID = 'Z';
 int TIME_LIMIT = 600000; // 60000ms = 1 minute timer. This is for the whole game.
 int TREE_WIN_DURATION = 300000; // 30s Time allowed for players to get both the win states for the hut and the trees. This should correspond to either's winning animation.
 int TREES_FAIL_ANIMATION_DURATION = 30000;  // 3 seconds for failure animation
@@ -26,6 +26,8 @@ int treeTimer;
 int hutTimer;
 int animationTimer;  // for use with global/weather timers. Trees and hut have their own individual timers for local stuff. See below.
 int weather_state = 0;  // idle, night, summer storm, cherry blossoms (0, 1, 2, 3)
+char trees_button = '0';  // 0 I guess if nothing is pressed. Otherwise the letter ID of the button.
+char hut_button = '0';  // 0 if not pressed
 
 // Clouds IDs A-B
 
@@ -88,36 +90,44 @@ void readUpdateSlaveState() {
   // This method reads the states from Slaves as they come in, and updates states.
   if (Serial1.available()) {
     String s = Serial1.readStringUntil('\n');
+    Serial.println(s);
     s.trim();  // trim that newline off
     int strSize = s.length();
-    if ((strSize == 4) && (s.indexOf('{') == 0) && (s.indexOf('}') == 3)) {
-//      Serial.println(s);
+    if ((strSize == 5) && (s.indexOf('{') == 0) && (s.indexOf('}') == 4)) {
       char switchChar = (char) s[1];
+      
+      if ((bool) s[3]){
+        trees_button = (char) s[3];
+        // directly send button?
+      }
       switch (switchChar) {
         // Tree state updates
         case 'C':
-          t1_local_win = 1;
+          // cast a char containing an int to its corresponding int by getting the distance from the '0' char
+          // '1' - '0' -> 1  but only 0 to 9.
+          // There's another -48 thing but screw that.
+          t1_local_win = (s[2]-'0');
           break;
         case 'D':
-          t2_local_win = 1;
+          t2_local_win = (s[2]-'0');
           break;
         case 'E':
-          t3_local_win = 1;
+          t3_local_win = (s[2]-'0');
           break;
         case 'F':
-          t4_local_win = 1;
+          t4_local_win = (s[2]-'0');
           break;
         case 'G':
-          t5_local_win = 1;
+          t5_local_win = (s[2]-'0');
           break;
         case 'H':
-          t6_local_win = 1;
+          t6_local_win = (s[2]-'0');
           break;
         case 'I':
-          t7_local_win = 1;
+          t7_local_win = (s[2]-'0');
           break;
         case 'J':
-          t8_local_win = 1;
+          t8_local_win = (s[2]-'0');
           break;
         default:
           break;
@@ -133,7 +143,6 @@ void treeGameManager() {
   // Someone started the game. t1 is a local win but no others.
   if (trees_state == 0) {
     // Someone lit the first beacon
-    
     if (t1_local_win && !t2_local_win && !t3_local_win && !t4_local_win && !t5_local_win && !t6_local_win && !t7_local_win && !t8_local_win) {
       gameTimer = millis();
       trees_state = 1;  // tree game playing
@@ -167,11 +176,12 @@ void treeGameManager() {
 
         // The beacons of Minas Tirith, the beacons are lit! Gondor calls for aid!
         // The Trees game is won. All local_wins are 1's.
-      } else {
+      } else if (t1_local_win & t2_local_win & t3_local_win & t4_local_win & t5_local_win & t6_local_win & t7_local_win & t8_local_win) {
         trees_state = 2;
         treeTimer = millis();
+      }else{
+        trees_state = 1;
       }
-
       // Game over: Ran out of time. Run fail animation.
     } else {
       trees_state = 3;
@@ -219,7 +229,7 @@ void weatherManager() {
 
     // defaults to idle
   } else {
-    weather_state = 0;
+    weather_state = weather_state;
   }
 }
 
@@ -228,7 +238,9 @@ void updateSlaves() {
   // This method sends over radio the state string
   // {0A10} {tree state, trees beacon, hut state, weather state}
     Serial1.print("{");
+    Serial1.print(ID);
     Serial1.print(trees_state);
+//    Serial1.print('2');
     Serial1.print(trees_current_beacon);
     Serial1.print(hut_state);
     Serial1.print(weather_state);
@@ -240,7 +252,9 @@ void updateServer() {
   // This method sends over radio the state string
   // {0C10C0} {tree state, trees beacon, hut state, weather state, trees_button, hut_button}
   Serial.print("{");
+  Serial.print(ID);
   Serial.print(trees_state);
+//  Serial1.print('2');
   Serial.print(trees_current_beacon);
   Serial.print(hut_state);
   Serial.print(weather_state);
