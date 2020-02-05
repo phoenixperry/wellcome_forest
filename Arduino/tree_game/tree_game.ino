@@ -9,14 +9,14 @@ AsyncDelay asyncDelay;
 /**
  * Tree object
  * contains the state of the neopixel and button
- * has an id string, from "C" - "J" (C is the initial beacon tree)
+ * has an id char, from 'C' - 'J' (C is the initial beacon tree)
  *
  */
-Tree tree("D");
+Tree tree('C');
 
 void setup() {
   // setup Serial
-  Serial.begin(9600);
+  Serial1.begin(9600);
   // setup neopixel
   FastLED.addLeds<NEOPIXEL, LED_PIN>(leds, LED_COUNT);
   // setup button
@@ -26,25 +26,37 @@ void setup() {
   digitalWrite(BUTTON_OUT, HIGH);
   digitalWrite(BUTTON_LED, HIGH);
   // set initial hue
-  tree.hue = tree.is_beacon() ? 20.0 : 100.0;
+  tree.hue = tree.is_initial_beacon() ? 20.0 : 100.0;
 }
+void send_state(Tree tree) {
+  Serial1.print("{");
+  Serial1.print(tree.id);
+  bool local_win = tree.state == TreeState::beacon && tree.button_was_pressed;
+  Serial1.print(local_win);
+  Serial1.println("}");
+}
+
+enum GameState { start, playing, won, lost };
 
 void loop() {
   time++;
 
   /*** PARSE STATE TRANSITIONS ***/
-  while (Serial.available()) {
-    String msg = Serial.readStringUntil('\n');
+  while (Serial1.available()) {
+    String msg = Serial1.readStringUntil('\n');
     if (is_valid_msg(msg)) {
-      String id = get_tree_id(msg);
-      if (tree.matches(id)) {
-        Serial.println("you selected this tree!");
+      int game_state = get_game_state(msg);
+      if (game_state == GameState::playing) {
+        tree.set_playing_state(get_next_beacon(msg));
+      }
+      if (game_state == GameState::lost) {
+        tree.state = TreeState::fail;
       }
     }
   }
 
   /*** IDLE STATE ***/
-  if (tree.state == idle) {
+  if (tree.state == TreeState::idle) {
     double speed = 0.002;
     tree.hue = 100.0;
     tree.saturation = 150 + abs(sin(time * speed)) * 50;
@@ -64,13 +76,13 @@ void loop() {
   }
 
   /*** BEACON STATE ***/
-  else if (tree.state == beacon) {
+  else if (tree.state == TreeState::beacon) {
     tree.while_not_pressed([] {
       tree.hue = -sin(time * 0.007) * 30 + 50;
       tree.value = 220 + sin(time * 0.007) * 35;
       tree.saturation = 255;
     });
-    tree.on_pressed([] {});
+    tree.on_pressed([] { send_state(tree); });
     tree.while_pressed([] {
       if (tree.hue > 20) {
         tree.hue -= 0.2;
@@ -79,7 +91,7 @@ void loop() {
       }
     });
     tree.show();
-  } else if (tree.state == waiting) {
+  } else if (tree.state == TreeState::waiting) {
     tree.hue = 100;
     tree.saturation = 240;
     if (tree.value > 0.2) {
@@ -90,7 +102,7 @@ void loop() {
     tree.show();
   }
   /*** FAIL STATE ***/
-  else if (tree.state == fail) {
+  else if (tree.state == TreeState::fail) {
     double speed = 0.005;
     tree.hue = 250;
     tree.saturation = 240;
