@@ -33,18 +33,13 @@ void setup() {
 }
 
 void send_state(Tree tree) {
-  bool local_win = tree.state == TreeState::beacon && tree.button_was_pressed;
+  bool local_win = tree.state == TreeState::beacon && tree.button_was_pressed ||
+                   tree.state == TreeState::win_local;
   Serial1.print("{");
   Serial1.print(tree.id);
   Serial1.print(local_win);
   Serial1.print(tree.button_was_pressed);
   Serial1.println("}");
-
-  Serial.print("{");
-  Serial.print(tree.id);
-  Serial.print(local_win);
-  Serial.print(tree.button_was_pressed);
-  Serial.println("}");
 }
 
 enum GameState { start, playing, won, lost };
@@ -60,18 +55,29 @@ void loop() {
   /*** PARSE STATE TRANSITIONS ***/
   while (Serial1.available()) {
     String msg = Serial1.readStringUntil('\n');
+    msg.trim();
     if (is_valid_msg(msg)) {
       Serial.println("recieved valid message");
       int game_state = get_game_state(msg);
-      if (game_state == GameState::playing) {
-        Serial.println("playing state");
+      Serial.print("state: ");
+      Serial.println(game_state);
+
+      if (game_state == GameState::start) {
+        //
+      } else if (game_state == GameState::playing) {
+        Serial.println("entered playing state");
         tree.set_beacon_state(get_next_beacon(msg));
-      }
-      if (game_state == GameState::lost) {
-        Serial.println("lost state");
+      } else if (game_state == GameState::won) {
+        //
+      } else if (game_state == GameState::lost) {
+        Serial.println("entered lost state");
         tree.state = TreeState::fail;
       }
     }
+    // else {
+    //   Serial.print("invalid message: ");
+    //   Serial.println(msg);
+    // }
   }
 
   /*** IDLE STATE ***/
@@ -123,6 +129,7 @@ void loop() {
     if (tree.value > 0.2) {
       tree.value -= 0.02;
     }
+    tree.on_pressed([] {});
     tree.show();
   }
   /*** FAIL STATE ***/

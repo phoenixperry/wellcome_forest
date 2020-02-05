@@ -21,6 +21,9 @@ public:
     if (id == new_beacon_id) {
       state = TreeState::beacon;
     }
+    if (id > new_beacon_id) {
+      state = TreeState::waiting;
+    }
   }
   void set_color(double h, double s, double v) {
     hue = h;

@@ -9,9 +9,10 @@
 
 bool is_button_pressed() { return digitalRead(BUTTON_IN) == LOW; }
 bool is_valid_msg(String msg) {
-  return msg.startsWith("{") && msg.endsWith("}") && msg.length() == 6;
+  return msg.startsWith("{") && msg.endsWith("}") && msg.charAt(1) == 'Z' &&
+         msg.length() == 7;
 }
 
-int get_game_state(String msg) { return msg.charAt(1) - '0'; }
-char get_next_beacon(String msg) { return msg.charAt(2); }
-int get_weather_state(String msg) { return msg.charAt(3) - '0'; }
+int get_game_state(String msg) { return msg.charAt(2) - '0'; }
+char get_next_beacon(String msg) { return msg.charAt(3); }
+int get_weather_state(String msg) { return msg.charAt(5) - '0'; }
