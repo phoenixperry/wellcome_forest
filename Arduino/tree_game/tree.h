@@ -33,9 +33,13 @@ public:
       button_was_pressed = true;
     }
   }
-
   template <typename Func> void while_pressed(Func f) {
     if (button_was_pressed) {
+      f();
+    }
+  }
+  template <typename Func> void while_not_pressed(Func f) {
+    if (!button_was_pressed) {
       f();
     }
   }
