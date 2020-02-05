@@ -12,7 +12,7 @@ AsyncDelay asyncDelay;
  * has an id string, from "C" - "J" (C is the initial beacon tree)
  *
  */
-Tree tree("C");
+Tree tree("D");
 
 void setup() {
   // setup Serial
@@ -79,9 +79,22 @@ void loop() {
       }
     });
     tree.show();
+  } else if (tree.state == waiting) {
+    tree.hue = 100;
+    tree.saturation = 240;
+    if (tree.value > 0.2) {
+      tree.value -= 0.02;
+    } else {
+      tree.state = fail;
+    }
+    tree.show();
   }
   /*** FAIL STATE ***/
   else if (tree.state == fail) {
-    tree.set_color(240, 240, 200);
+    double speed = 0.005;
+    tree.hue = 250;
+    tree.saturation = 240;
+    tree.value = 255 - abs(cos(time * speed)) * 55;
+    tree.show();
   }
 }
