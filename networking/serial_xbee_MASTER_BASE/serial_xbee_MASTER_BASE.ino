@@ -1,19 +1,18 @@
 // This master lives with the laptop and feeds Unity with all the info it needs. It also sends out lovely data to the trees, clouds, and yurt!
 
 // Declare constants.
-int TIME_BETWEEN_SLAVE_UPDATES = 100;
-int NUM_TREES = 8;
-int NUM_HUTS = 1;
-int NUM_CLOUDS = 2;
-int NUM_STATES = 1;  // number of states for each slave
-int NUM_GLOBAL_STATES = 3;
-char ID = 'Z';
-int GAMETIME_LIMIT = 60000;
-int TIME_LIMIT = GAMETIME_LIMIT; // 60000ms = 1 minute timer. This is for the whole game. 
-int TREE_WIN_DURATION = 30000; // 30s Time allowed for players to get both the win states for the hut and the trees. This should correspond to either's winning animation.
-int TREES_FAIL_ANIMATION_DURATION = 30000;  // 3 seconds for failure animation
-int HUT_WIN_DURATION = 30000; // 30s duration for hut playing animation. This is time for the tree players to also win
-int GLOBAL_WIN_DURATION = 30000; // 30s for global win state
+const int TIME_BETWEEN_SLAVE_UPDATES = 100;
+const int NUM_TREES = 8;
+const int NUM_HUTS = 1;
+const int NUM_CLOUDS = 2;
+const int NUM_STATES = 1;  // number of states for each slave
+const int NUM_GLOBAL_STATES = 3;
+const char ID = 'Z';
+const int TIME_LIMIT = 60000; // 60000ms = 1 minute timer. This is for the whole game. 
+const int TREE_WIN_DURATION = 30000; // 30s Time allowed for players to get both the win states for the hut and the trees. This should correspond to either's winning animation.
+const int TREES_FAIL_ANIMATION_DURATION = 30000;  // 3 seconds for failure animation
+const int HUT_WIN_DURATION = 30000; // 30s duration for hut playing animation. This is time for the tree players to also win
+const int GLOBAL_WIN_DURATION = 30000; // 30s for global win state
 
 
 // Declare local variables
@@ -75,7 +74,7 @@ bool t8_local_win = 0;
 //bool trees_beacons[8] = {}
 
 // Hut ID K
-bool hut_state = 0;  // idle/playing/win/lose (0,1,2,3)
+int hut_state = 0;  // idle/playing/win/lose (0,1,2,3)
 
 // YES I SHOULD DO A MORE CLEVER WAY TO MANAGE STATES.
 
@@ -100,7 +99,7 @@ void setup() {
 // This method tests the game states, including animations. It's a visual test. 
 // It waits for user input over serial to proceed. If Y, the whole thing proceeds. If N, the cycle continues.
 bool testGames(){
-  // cycle through the states one by one to get visual confirmation that everything functions properly.
+   cycle through the states one by one to get visual confirmation that everything functions properly.
   Serial.println("Testing the beacon assignments.");
   Serial.println("Z0C0000");  // starting idle state with no buttons
   Serial1.println("Z0C0000");
@@ -180,7 +179,8 @@ bool testGames(){
   t8_local_win = true;
   treeGameManager();
   delay(100);
-  Serial.print("Asserting that tree_state == 2 to signal game won.: ");
+  currentTime = millis();
+  Serial.print("Asserting that tree_state == 2 to signal game won: ");
   Serial.println(trees_state==2);
   updateSlaves();
   updateServer();
@@ -201,6 +201,7 @@ bool testGames(){
   updateSlaves();
   updateServer();
   delay(TIME_LIMIT+1000);
+  currentTime = millis();
   treeGameManager();
   updateSlaves();
   updateServer();
@@ -220,9 +221,11 @@ bool testGames(){
 
   Serial.println("Resetting and testing weather tests");
   resetAllTreesState();
+  resetAllHutState();
   hut_state = 2;
   trees_state = 2;
   treeTimer = millis();
+  hutTimer = millis();
   currentTime = millis();
   weatherManager();
   updateSlaves();
@@ -236,6 +239,7 @@ bool testGames(){
   Serial.print("Midpoint check: Asserting that weather state == 3: ");
   Serial.println(weather_state==3);
   delay(GLOBAL_WIN_DURATION/2 +1000);
+  currentTime = millis();
   weatherManager();
   Serial.print("Animation completion check: Asserting that weather state == 0: ");
   Serial.println(weather_state==0);
@@ -396,7 +400,7 @@ void treeGameManager() {
 
 void weatherManager() {
   // If the hut is also in a winning state, but the treeTimer hasn't elapsed yet, run the tree part of the big win animation.
-  if (hut_state == 2 && trees_state == 2 && (currentTime - treeTimer < TREE_WIN_DURATION) && (currentTime - hutTimer < HUT_WIN_DURATION) && weather_state != 3) {
+  if (hut_state == 2 && trees_state == 2 && ((currentTime - treeTimer) < TREE_WIN_DURATION) && (currentTime - hutTimer < HUT_WIN_DURATION) && weather_state != 3) {
     weather_state = 3;
     animationTimer = millis();  // set the animation timer
 
