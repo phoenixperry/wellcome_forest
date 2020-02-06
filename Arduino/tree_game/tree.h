@@ -1,6 +1,14 @@
 #include "FastLED.h"
 
-enum TreeState { idle, beacon, win_local, win_global, waiting, fail };
+enum TreeState {
+  idle,
+  beacon,
+  pressed_beacon,
+  win_forest,
+  win_global,
+  waiting,
+  fail
+};
 
 class Tree {
 
@@ -15,6 +23,7 @@ public:
   Tree(char tree_id) {
     id = tree_id;
     state = is_initial_beacon() ? TreeState::beacon : TreeState::idle;
+    hue = is_initial_beacon() ? 20.0 : 100.0;
   };
   bool is_initial_beacon() { return id == 'C'; }
   void set_beacon_state(char new_beacon_id) {
@@ -32,6 +41,12 @@ public:
   }
   void show() { FastLED.showColor(CHSV(hue, saturation, value)); }
   void reset_button() { button_was_pressed = false; }
+
+  void reset() {
+    reset_button();
+    state = is_initial_beacon() ? TreeState::beacon : TreeState::idle;
+    hue = is_initial_beacon() ? 20.0 : 100.0;
+  }
 
   template <typename Func> void on_pressed(Func f) {
     if (is_button_pressed() && !button_was_pressed) {
