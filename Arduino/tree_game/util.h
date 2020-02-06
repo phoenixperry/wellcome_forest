@@ -7,7 +7,7 @@
 #define BUTTON_OUT 12
 #define BUTTON_IN 13
 
-bool is_button_pressed() { return digitalRead(BUTTON_IN) == LOW; }
+bool is_button_pressed() { return digitalRead(BUTTON_IN) == HIGH; }
 bool is_valid_msg(String msg) {
   return msg.startsWith("{") && msg.endsWith("}") && msg.charAt(1) == 'Z' &&
          msg.length() == 7;
