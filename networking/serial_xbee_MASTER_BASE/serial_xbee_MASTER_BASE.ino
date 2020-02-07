@@ -79,51 +79,64 @@ int hut_state = 0;  // idle/playing/win/lose (0,1,2,3)
 // YES I SHOULD DO A MORE CLEVER WAY TO MANAGE STATES.
 
 // TESTING
-bool doTestOnStartup = 1;
+bool doTestOnStartup = true;
 
 void setup() {
   //Begin serial monitor port - this is the cable.
   Serial.begin(9600);
+  delay(500);
   //Begin HW serial - this is the radio.
   Serial1.begin(9600);
-  delay(50);
+  delay(500);
   lastUpdate = millis();
 
-  if (doTestOnStartup){
-    testGames();
-  }
-  
 }
 
 
 // This method tests the game states, including animations. It's a visual test. 
 // It waits for user input over serial to proceed. If Y, the whole thing proceeds. If N, the cycle continues.
 bool testGames(){
-   cycle through the states one by one to get visual confirmation that everything functions properly.
+//   cycle through the states one by one to get visual confirmation that everything functions properly.
   Serial.println("Testing the beacon assignments.");
-  Serial.println("Z0C0000");  // starting idle state with no buttons
-  Serial1.println("Z0C0000");
+  trees_current_beacon = 'C';
+  treeGameManager();
+  updateSlaves();
+  updateServer();
   delay(1000);
-  Serial.println("Z1D0000");  // test game playing, beacon on 2nd tree
-  Serial1.println("Z1D0000");
+  trees_current_beacon = 'D';
+  treeGameManager();
+  updateSlaves();
+  updateServer();
   delay(1000);
-  Serial.println("Z1E0000");  // test game playing, beacon on 3rd tree
-  Serial1.println("Z1E0000");
+  trees_current_beacon = 'E';
+  treeGameManager();
+  updateSlaves();
+  updateServer();
   delay(1000);
-  Serial.println("Z1F0000");  // test game playing, beacon on 4th tree
-  Serial1.println("Z1F0000");
+  trees_current_beacon = 'F';
+  treeGameManager();
+  updateSlaves();
+  updateServer();
   delay(1000);
-  Serial.println("Z1G0000");  // test game playing, beacon on 5th tree
-  Serial1.println("Z1G0000");
+  trees_current_beacon = 'G';
+  treeGameManager();
+  updateSlaves();
+  updateServer();
   delay(1000);
-  Serial.println("Z1H0000");  // test game playing, beacon on 6th tree
-  Serial1.println("Z1H0000");
+  trees_current_beacon = 'H';
+  treeGameManager();
+  updateSlaves();
+  updateServer();
   delay(1000);
-  Serial.println("Z1I0000");  // test game playing, beacon on 7th tree
-  Serial1.println("Z1I0000");
+  trees_current_beacon = 'I';
+  treeGameManager();
+  updateSlaves();
+  updateServer();
   delay(1000);
-  Serial.println("Z1J0000");  // test game playing, beacon on 8th tree
-  Serial1.println("Z1J0000");
+  trees_current_beacon = 'J';
+  treeGameManager();
+  updateSlaves();
+  updateServer();
   delay(1000);
   
   // Testing Tree victory state management
@@ -248,6 +261,7 @@ bool testGames(){
   resetWeatherState();
 
   Serial.println("Testing complete. If any errors visible, please hurry and fix them. <3 <3 <3");
+  doTestOnStartup = false;
 }
 
 void resetAllTreesState(){
@@ -278,6 +292,8 @@ void resetWeatherState(){
 
 void readUpdateSlaveState() {
   // This method reads the states from Slaves as they come in, and updates states.
+//  String s = Serial1.readStringUntil('\n');
+//  Serial.println(s);
   if (Serial1.available()) {
     String s = Serial1.readStringUntil('\n');
     Serial.println(s);
@@ -493,6 +509,12 @@ void readServerStateUntil() {
 
 
 void loop() {
+
+  if (doTestOnStartup){
+    doTestOnStartup = false;
+    testGames();
+  }
+  
   // put your main code here, to run repeatedly:
   readUpdateSlaveState();
   readServerStateUntil();
