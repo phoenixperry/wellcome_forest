@@ -6,6 +6,7 @@ CRGB leds[LED_COUNT];
 uint16_t time = 0; // timer used for animations
 AsyncDelay idle_delay;
 AsyncDelay send_state_timer;
+int global_speed = 1;
 
 /**
  * Tree object
@@ -94,12 +95,12 @@ void loop() {
   if (tree.state == TreeState::idle) {
     double speed = 0.002;
     tree.hue = 100.0;
-    tree.saturation = 150 + abs(sin(time * speed)) * 50;
+    tree.saturation = 150 + abs(sin(time * speed * global_speed)) * 50;
     tree.value = 255 - abs(cos(time * speed)) * 55;
     tree.on_pressed([] { idle_delay.start(2000, AsyncDelay::MILLIS); });
     tree.while_pressed([] {
       double speed = 0.01;
-      tree.value = 255 - abs(cos(time * speed)) * 100;
+      tree.value = 255 - abs(cos(time * speed * global_speed)) * 100;
       if (idle_delay.isExpired()) {
         tree.reset_button();
       }
@@ -110,8 +111,9 @@ void loop() {
   /*** BEACON STATE ***/
   else if (tree.state == TreeState::beacon) {
     tree.while_not_pressed([] {
-      tree.hue = -sin(time * 0.007) * 30 + 50;
-      tree.value = 220 + sin(time * 0.007) * 35;
+      double speed = 0.007;
+      tree.hue = -sin(time * speed * global_speed) * 30 + 50;
+      tree.value = 220 + sin(time * speed * global_speed) * 35;
       tree.saturation = 255;
     });
     tree.on_pressed([] { send_state(tree); });
@@ -135,12 +137,19 @@ void loop() {
 
   /*** WIN FOREST STATE ***/
   else if (tree.state == TreeState::win_forest) {
-    tree.hue = 0;
+    double speed = 0.007;
+    tree.hue = 135;
+    tree.saturation = 140 + 20 * sin(time * speed * global_speed);
+    tree.while_pressed([] { tree.button_was_pressed = false; });
+    tree.on_pressed([] {});
     tree.show();
   }
   /*** WIN GLOBAL STATE ***/
-  else if (tree.state == TreeState::win_forest) {
-    tree.hue = 150;
+  else if (tree.state == TreeState::win_global) {
+    tree.hue = 240;
+    tree.saturation = 170 - sin(time * 0.003 * global_speed) * 30;
+    tree.while_pressed([] { tree.button_was_pressed = false; });
+    tree.on_pressed([] {});
     tree.show();
   }
   /*** WAITING STATE ***/
@@ -150,15 +159,18 @@ void loop() {
     if (tree.value > 0.2) {
       tree.value -= 0.02;
     }
+    tree.while_pressed([] { tree.button_was_pressed = false; });
     tree.on_pressed([] {});
     tree.show();
   }
   /*** FAIL STATE ***/
   else if (tree.state == TreeState::fail) {
     double speed = 0.005;
-    tree.hue = 250;
+    tree.hue = 2;
     tree.saturation = 240;
     tree.value = 200 - abs(cos(time * speed)) * 100;
     tree.show();
+    tree.while_pressed([] { tree.button_was_pressed = false; });
+    tree.on_pressed([] {});
   }
 }
