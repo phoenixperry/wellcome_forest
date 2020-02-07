@@ -8,12 +8,14 @@ const int NUM_CLOUDS = 2;
 const int NUM_STATES = 1;  // number of states for each slave
 const int NUM_GLOBAL_STATES = 3;
 const char ID = 'Z';
-const int TIME_LIMIT = 60000; // 60000ms = 1 minute timer. This is for the whole game. 
-const int TREE_WIN_DURATION = 30000; // 30s Time allowed for players to get both the win states for the hut and the trees. This should correspond to either's winning animation.
-const int TREES_FAIL_ANIMATION_DURATION = 30000;  // 3 seconds for failure animation
-const int HUT_WIN_DURATION = 30000; // 30s duration for hut playing animation. This is time for the tree players to also win
-const int GLOBAL_WIN_DURATION = 30000; // 30s for global win state
-
+const long TIME_LIMIT = 6000; // 60000ms = 1 minute timer. This is for the whole game. 
+const long TREE_WIN_DURATION = 30000; // 30s Time allowed for players to get both the win states for the hut and the trees. This should correspond to either's winning animation.
+const long TREES_FAIL_ANIMATION_DURATION = 30000;  // 3 seconds for failure animation
+const long HUT_WIN_DURATION = 30000; // 30s duration for hut playing animation. This is time for the tree players to also win
+const long GLOBAL_WIN_DURATION = 30000; // 30s for global win state
+const int BROADCAST_RESET_N_TIMES = 3;
+bool rebroadcast_reset = false;
+int rebroadcast_count = 0;
 
 // Declare local variables
 int lastUpdate;
@@ -22,10 +24,10 @@ String updateFromServerString = "";
 
 // GAME STATE MANAGEMENT VARIABLES
 // Global game state
-int gameTimer;
-int treeTimer;
-int hutTimer;
-int animationTimer;  // for use with global/weather timers. Trees and hut have their own individual timers for local stuff. See below.
+long gameTimer;
+long treeTimer;
+long hutTimer;
+long animationTimer;  // for use with global/weather timers. Trees and hut have their own individual timers for local stuff. See below.
 int weather_state = 0;  // idle, night, summer storm, cherry blossoms (0, 1, 2, 3)
 int server_weather_state = 0;  // since there may be conflicts between the weather that the server sends us and this. 
 char trees_button = '0';  // 0 I guess if nothing is pressed. Otherwise the letter ID of the button.
@@ -83,7 +85,7 @@ int hut_state = 0;  // idle/playing/win/lose (0,1,2,3)
 // TODO: Class-based state management. UPDATE: In progress.
 
 // TESTING
-bool doTestOnStartup = true;
+bool doTestOnStartup = false;
 
 
 void setup() {
@@ -94,6 +96,9 @@ void setup() {
   Serial1.begin(9600);
   delay(500);
   lastUpdate = millis();
+
+  resetAllTreesState();
+  resetAllHutState();
 
 }
 
@@ -271,16 +276,50 @@ bool testGames(){
 
 void resetAllTreesState(){
   t1_local_win = 0;
+  t1_button_pressed[0] = false;
+  t1_button_pressed[1] = false;
+  t1_button_state_normalized = false;
+  
   t2_local_win = 0;
+  t2_button_pressed[0] = false;
+  t2_button_pressed[1] = false;
+  t2_button_state_normalized = false;
+  
   t3_local_win = 0;
+  t3_button_pressed[0] = false;
+  t3_button_pressed[1] = false;
+  t3_button_state_normalized = false;
+  
   t4_local_win = 0;
+  t4_button_pressed[0] = false;
+  t4_button_pressed[1] = false;
+  t4_button_state_normalized = false;
+  
   t5_local_win = 0;
+  t5_button_pressed[0] = false;
+  t5_button_pressed[1] = false;
+  t5_button_state_normalized = false;
+  
   t6_local_win = 0;
+  t6_button_pressed[0] = false;
+  t6_button_pressed[1] = false;
+  t6_button_state_normalized = false;
+  
   t7_local_win = 0;
+  t7_button_pressed[0] = false;
+  t7_button_pressed[1] = false;
+  t7_button_state_normalized = false;
+  
   t8_local_win = 0;
+  t8_button_pressed[0] = false;
+  t8_button_pressed[1] = false;
+  t8_button_state_normalized = false;
+  
   trees_state = 0;
   trees_current_beacon = 'C';
   treeTimer = 0;
+  updateSlaves();
+  updateServer();
 }
 
 
@@ -356,26 +395,29 @@ void readUpdateSlaveState() {
 }
 
 
-void update_button_pressed(bool button_state, bool historical_btn_array[], bool button_state_for_sending){
-        if(button_state != historical_btn_array[0] && button_state !=historical_btn_array[1]){
-            button_state_for_sending = button_state;
-        }
+void update_button_pressed(bool button_state, bool historical_btn_array[], bool button_state_normalized){  
+  if(button_state != historical_btn_array[0] && button_state !=historical_btn_array[1]){
+      button_state_normalized = button_state;
+  }
 
-        historical_btn_array[0] = historical_btn_array[1];
-        historical_btn_array[1] = button_state;
-    }
+  historical_btn_array[0] = historical_btn_array[1];
+  historical_btn_array[1] = button_state;
+}
 
 
-void treeGameManager() {
-  // Someone started the game. t1 is a local win but no others.
+void treeGameManager() {  
   if (trees_state == 0) {
     // Someone lit the first beacon
-    if (t1_local_win && !t2_local_win && !t3_local_win && !t4_local_win && !t5_local_win && !t6_local_win && !t7_local_win && !t8_local_win) {
+    if (!rebroadcast_reset && t1_local_win && !t2_local_win && !t3_local_win && !t4_local_win && !t5_local_win && !t6_local_win && !t7_local_win && !t8_local_win) {
       gameTimer = millis();
       trees_state = 1;  // tree game playing
       trees_current_beacon = 'D'; // light up t2
     }
   } else if (trees_state == 1) {
+    if((currentTime - gameTimer)%500==0){
+      Serial.println(currentTime - gameTimer);
+    } 
+    
     if (currentTime - gameTimer < TIME_LIMIT) {
       // beacon 1-2 local_win is good, set the next beacon
       if (t1_local_win & t2_local_win & !t3_local_win & !t4_local_win & !t5_local_win & !t6_local_win & !t7_local_win & !t8_local_win) {
@@ -406,39 +448,56 @@ void treeGameManager() {
       } else if (t1_local_win & t2_local_win & t3_local_win & t4_local_win & t5_local_win & t6_local_win & t7_local_win & t8_local_win) {
         trees_state = 2;
         treeTimer = millis();  // set timer for victory animation
+        
+      // Game Over. if the buttons are pressed incorrectly. Fail condition is: Tree isn't beacon and isn't won.
+      } else if(
+        (trees_current_beacon!='C' && !t1_local_win && t1_button_state_normalized) || 
+        (trees_current_beacon!='D' && !t2_local_win && t2_button_state_normalized) || 
+        (trees_current_beacon!='E' && !t3_local_win && t3_button_state_normalized) || 
+        (trees_current_beacon!='F' && !t4_local_win && t4_button_state_normalized) || 
+        (trees_current_beacon!='G' && !t5_local_win && t5_button_state_normalized) || 
+        (trees_current_beacon!='H' && !t6_local_win && t6_button_state_normalized) || 
+        (trees_current_beacon!='I' && !t7_local_win && t7_button_state_normalized) || 
+        (trees_current_beacon!='J' && !t8_local_win && t8_button_state_normalized)
+        ){
+        Serial.println(trees_current_beacon);
+        Serial.println(t3_local_win);
+        Serial.println(t3_button_state_normalized);
+        delay(5000);
+        
+        trees_state = 3;
+        treeTimer = millis(); // set timer for failure animation
+        rebroadcast_reset = true;
+        rebroadcast_count = 0;
+        updateSlaves();
+        updateServer();  // force update
       }else{
-        trees_state = 1;
+        trees_state = trees_state;
       }
-      
-    // if the buttons are pressed incorrectly. Fail condition is: Tree isn't beacon and isn't won.
-    } else if(trees_current_beacon!='C' && !t1_local_win && t1_button_state_normalized || 
-              trees_current_beacon!='D' && !t2_local_win && t2_button_state_normalized || 
-              trees_current_beacon!='E' && !t3_local_win && t3_button_state_normalized || 
-              trees_current_beacon!='F' && !t4_local_win && t4_button_state_normalized || 
-              trees_current_beacon!='G' && !t5_local_win && t5_button_state_normalized || 
-              trees_current_beacon!='H' && !t6_local_win && t6_button_state_normalized || 
-              trees_current_beacon!='I' && !t7_local_win && t7_button_state_normalized || 
-              trees_current_beacon!='J' && !t8_local_win && t8_button_state_normalized){
-      trees_state = 3;
-      treeTimer = millis(); // set timer for failure animation
     // Game over: Ran out of time. Run fail animation.
     }else {
       trees_state = 3;
       treeTimer = millis(); // set timer for failure animation
+      rebroadcast_reset = true;
+      rebroadcast_count = 0;
+      updateSlaves();
+      updateServer();  // force update
     }
 
     // Run the tree victory animation for t=TREE_WIN_DURATION
   } else if (trees_state == 2) {
     // Victory animation has elapsed - reset the trees. Do nothing if it's not done.
     if (currentTime - treeTimer > TREE_WIN_DURATION) {
-      trees_state = 0;  // reset to idle.
-      trees_current_beacon = 'C'; // light up t1 to signal starting point
+      resetAllTreesState();
+      rebroadcast_reset = true;
+      rebroadcast_count = 0;
     }
 
     // End the tree failure animation after t=TREES_FAIL_ANIMATION_DURATION
   } else if (trees_state == 3 && (currentTime - treeTimer > TREES_FAIL_ANIMATION_DURATION)) {
-    trees_state = 0;  // reset to idle.
-    trees_current_beacon = 'C'; // light up t1 to signal starting point
+    resetAllTreesState();
+    rebroadcast_reset = true;
+    rebroadcast_count = 0;
 
     // Tree game should keep idling
   } else {
@@ -554,7 +613,8 @@ void loop() {
     doTestOnStartup = false;
     testGames();
   }
-  
+
+  currentTime = millis();
   // put your main code here, to run repeatedly:
   readUpdateSlaveState();
   readServerStateUntil();
@@ -562,10 +622,17 @@ void loop() {
   weatherManager();
 
   // determine whether the slaves have been kept waiting too long. If they have, update them.
-  currentTime = millis();
+  
   if ((currentTime - lastUpdate)  > TIME_BETWEEN_SLAVE_UPDATES) {
     updateSlaves();
     updateServer();  // sanity checking
     lastUpdate = currentTime;
-  }
+    if (rebroadcast_reset<BROADCAST_RESET_N_TIMES && rebroadcast_reset){
+      rebroadcast_count++;
+    }
+    if(rebroadcast_reset==BROADCAST_RESET_N_TIMES && rebroadcast_reset){
+      rebroadcast_reset = false;
+    }
+    }
+  
 }
