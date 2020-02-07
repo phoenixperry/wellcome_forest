@@ -36,54 +36,51 @@ char hut_button = '0';  // 0 if not pressed
 // Trees IDs C-J
 int trees_state = 0; // idle/playing/win/lose (0,1,2,3)
 char trees_current_beacon = 'C'; // ID of lit tree
+//int trees_currently_lit = 0;
 
 char t1_id = 'C';
 bool t1_local_win = 0;
-bool t1_button_pressed[2] = {false, false};
-bool t1_button_state_normalized = false;
+//bool t1_beacon = 0;
 
 char t2_id = 'D';
 bool t2_local_win = 0;
-bool t2_button_pressed[2] = {false, false};
-bool t2_button_state_normalized = false;
+//bool t2_beacon = 0;
 
 char t3_id = 'E';
 bool t3_local_win = 0;
-bool t3_button_pressed[2] = {false, false};
-bool t3_button_state_normalized = false;
+//bool t3_beacon = 0;
 
 char t4_id = 'F';
 bool t4_local_win = 0;
-bool t4_button_pressed[2] = {false, false};
-bool t4_button_state_normalized = false;
+//bool t4_beacon = 0;
 
 char t5_id = 'G';
 bool t5_local_win = 0;
-bool t5_button_pressed[2] = {false, false};
-bool t5_button_state_normalized = false;
+//bool t5_beacon = 0;
 
 char t6_id = 'H';
 bool t6_local_win = 0;
-bool t6_button_pressed[2] = {false, false};
-bool t6_button_state_normalized = false;
+//bool t6_beacon = 0;
 
 char t7_id = 'I';
 bool t7_local_win = 0;
-bool t7_button_pressed[2] = {false, false};
-bool t7_button_state_normalized = false;
+//bool t7_beacon = 0;
 
 char t8_id = 'J';
 bool t8_local_win = 0;
-bool t8_button_pressed[2] = {false, false};
-bool t8_button_state_normalized = false;
+//bool t8_beacon = 0;
+//
+//bool trees_wins[8] = {}
+//bool trees_beacons[8] = {}
 
 // Hut ID K
 int hut_state = 0;  // idle/playing/win/lose (0,1,2,3)
 
-// TODO: Class-based state management. UPDATE: In progress.
+// YES I SHOULD DO A MORE CLEVER WAY TO MANAGE STATES.
 
 // TESTING
 bool doTestOnStartup = true;
+
 
 
 void setup() {
@@ -316,35 +313,35 @@ void readUpdateSlaveState() {
           // '1' - '0' -> 1  but only 0 to 9.
           // There's another -48 thing but screw that.
           t1_local_win = (s[2]-'0');
-          update_button_pressed((s[3]-'0'), t1_button_pressed, t1_button_state_normalized);
+          t1_button_pressed = (s[3]-'0');
           break;
         case 'D':
           t2_local_win = (s[2]-'0');
-          update_button_pressed((s[3]-'0'), t2_button_pressed, t2_button_state_normalized);
+          t2_button_pressed = (s[3]-'0');
           break;
         case 'E':
           t3_local_win = (s[2]-'0');
-          update_button_pressed((s[3]-'0'), t3_button_pressed, t3_button_state_normalized);
+          t3_button_pressed = (s[3]-'0');
           break;
         case 'F':
           t4_local_win = (s[2]-'0');
-          update_button_pressed((s[3]-'0'), t4_button_pressed, t4_button_state_normalized);
+          t4_button_pressed = (s[3]-'0');
           break;
         case 'G':
           t5_local_win = (s[2]-'0');
-          update_button_pressed((s[3]-'0'), t5_button_pressed, t5_button_state_normalized);
+          t5_button_pressed = (s[3]-'0');
           break;
         case 'H':
           t6_local_win = (s[2]-'0');
-          update_button_pressed((s[3]-'0'), t6_button_pressed, t6_button_state_normalized);
+          t6_button_pressed = (s[3]-'0');
           break;
         case 'I':
           t7_local_win = (s[2]-'0');
-          update_button_pressed((s[3]-'0'), t7_button_pressed, t7_button_state_normalized);
+          t7_button_pressed = (s[3]-'0');
           break;
         case 'J':
           t8_local_win = (s[2]-'0');
-          update_button_pressed((s[3]-'0'), t8_button_pressed, t8_button_state_normalized);
+          t8_button_pressed = (s[3]-'0');
           break;
         default:
           break;
@@ -354,16 +351,6 @@ void readUpdateSlaveState() {
     }
   }
 }
-
-
-void update_button_pressed(bool button_state, bool historical_btn_array[], bool button_state_for_sending){
-        if(button_state != historical_btn_array[0] && button_state !=historical_btn_array[1]){
-            button_state_for_sending = button_state;
-        }
-
-        historical_btn_array[0] = historical_btn_array[1];
-        historical_btn_array[1] = button_state;
-    }
 
 
 void treeGameManager() {
@@ -409,20 +396,8 @@ void treeGameManager() {
       }else{
         trees_state = 1;
       }
-      
-    // if the buttons are pressed incorrectly. Fail condition is: Tree isn't beacon and isn't won.
-    } else if(trees_current_beacon!='C' && !t1_local_win && t1_button_state_normalized || 
-              trees_current_beacon!='D' && !t2_local_win && t2_button_state_normalized || 
-              trees_current_beacon!='E' && !t3_local_win && t3_button_state_normalized || 
-              trees_current_beacon!='F' && !t4_local_win && t4_button_state_normalized || 
-              trees_current_beacon!='G' && !t5_local_win && t5_button_state_normalized || 
-              trees_current_beacon!='H' && !t6_local_win && t6_button_state_normalized || 
-              trees_current_beacon!='I' && !t7_local_win && t7_button_state_normalized || 
-              trees_current_beacon!='J' && !t8_local_win && t8_button_state_normalized){
-      trees_state = 3;
-      treeTimer = millis(); // set timer for failure animation
-    // Game over: Ran out of time. Run fail animation.
-    }else {
+      // Game over: Ran out of time. Run fail animation.
+    } else {
       trees_state = 3;
       treeTimer = millis(); // set timer for failure animation
     }
@@ -489,14 +464,7 @@ void updateServer() {
   Serial.print(trees_current_beacon);
   Serial.print(hut_state);
   Serial.print(weather_state);
-  Serial.print(t1_button_state_normalized);
-  Serial.print(t2_button_state_normalized);
-  Serial.print(t3_button_state_normalized);
-  Serial.print(t4_button_state_normalized);
-  Serial.print(t5_button_state_normalized);
-  Serial.print(t6_button_state_normalized);
-  Serial.print(t7_button_state_normalized);
-  Serial.print(t8_button_state_normalized);
+  Serial.print(trees_button);
   Serial.print(hut_button);
   Serial.println("}");  
 }
