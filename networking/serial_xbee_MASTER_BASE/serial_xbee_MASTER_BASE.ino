@@ -1,6 +1,9 @@
-// This master lives with the laptop and feeds Unity with all the info it needs. It also sends out lovely data to the trees, clouds, and yurt!
+// This code is part of the installation art game Forest Daydream for the Wellcome Collection.
+// It primarily receives and sends radio signals from the rest of the devices with Xbees.
+// It then processes them, manages the game state, and feeds the input over Serial to Unity.
 
-// Declare constants.
+// DECLARE CONSTANTS
+const char ID = 'Z';
 const int TIME_BETWEEN_SLAVE_UPDATES = 50;
 const int TIME_BETWEEN_SERVER_UPDATES = 50;
 const int NUM_TREES = 8;
@@ -8,22 +11,14 @@ const int NUM_HUTS = 1;
 const int NUM_CLOUDS = 2;
 const int NUM_STATES = 1;  // number of states for each slave
 const int NUM_GLOBAL_STATES = 3;
-const char ID = 'Z';
-const long TIME_LIMIT = 6000; // 60000ms = 1 minute timer. This is for the whole game. 
+const long TIME_LIMIT = 60000; // 60000ms = 1 minute timer. This is for the whole game. 
 const long TREE_WIN_DURATION = 30000; // 30s Time allowed for players to get both the win states for the hut and the trees. This should correspond to either's winning animation.
 const long TREES_FAIL_ANIMATION_DURATION = 30000;  // 3 seconds for failure animation
 const long HUT_WIN_DURATION = 30000; // 30s duration for hut playing animation. This is time for the tree players to also win
 const long GLOBAL_WIN_DURATION = 30000; // 30s for global win state
 const int BROADCAST_RESET_N_TIMES = 3;
-bool rebroadcast_reset = false;
-int rebroadcast_count = 0;
 
-// Declare local variables
-int lastSlaveUpdate;
-int lastServerUpdate;
-int currentTime;
-String updateFromServerString = "";
-
+// DECLARE VARIABLES
 // GAME STATE MANAGEMENT VARIABLES
 // Global game state
 long gameTimer;
@@ -32,8 +27,12 @@ long hutTimer;
 long animationTimer;  // for use with global/weather timers. Trees and hut have their own individual timers for local stuff. See below.
 int weather_state = 0;  // idle, night, summer storm, cherry blossoms (0, 1, 2, 3)
 int server_weather_state = 0;  // since there may be conflicts between the weather that the server sends us and this. 
-char trees_button = '0';  // 0 I guess if nothing is pressed. Otherwise the letter ID of the button.
-char hut_button = '0';  // 0 if not pressed
+int lastSlaveUpdate;
+int lastServerUpdate;
+int currentTime;
+String updateFromServerString = "";
+bool rebroadcast_reset = false;
+int rebroadcast_count = 0;
 
 // Clouds IDs A-B
 
@@ -112,6 +111,7 @@ void setup() {
 bool testGames(){
 //   cycle through the states one by one to get visual confirmation that everything functions properly.
   Serial.println("Testing the beacon assignments.");
+  trees_state = 1;
   trees_current_beacon = 'C';
   treeGameManager();
   updateStatesTogether();
@@ -300,8 +300,7 @@ void resetAllTreesState(){
   trees_state = 0;
   trees_current_beacon = 'C';
   treeTimer = 0;
-  updateSlaves();
-  updateServer();
+  updateStatesTogether();
 }
 
 
@@ -315,10 +314,11 @@ void resetWeatherState(){
   weather_state = 0;
 }
 
+
 void resetEntireGame(){
   resetAllHutState();
   resetWeatherState();
-  resetAllTreesState();
+  resetAllTreesState();  // This goes last so it can handle updating states.
 }
 
 
@@ -330,14 +330,9 @@ void readUpdateSlaveState() {
     s.trim();  // trim that newline off
     int strSize = s.length();
 
-    // Check validity to ensure it's a Tree update.
+    // Check validity to ensure it's a Tree update. Could add additional check to see if s[1] is in CDEFGHIJ if needed.
     if ((strSize == 5) && (s.indexOf('{') == 0) && (s.indexOf('}') == 4)) {
       char switchChar = (char) s[1];
-      
-      if ((bool) s[3]){
-        trees_button = (char) s[3];
-        // directly send button?
-      }
       
       switch (switchChar) {
         // Tree state updates
@@ -383,7 +378,8 @@ void readUpdateSlaveState() {
     // Check validity to see if it's a Hut update
     } else if((strSize == 8) && s[1]=='K' && (s.indexOf('{') == 0) && (s.indexOf('}') == 5)){
       // Loop and update the hut buttons array. s[2] is first button.
-      // Then 
+      // Then tell the hut manager to update
+      
       int button_count = 0;
       for (i=0; i<5; i++){
         int value = (s[i+2]-'0')
@@ -417,6 +413,12 @@ void update_button_pressed(bool button_state, bool historical_btn_array[], bool 
 
 
 void treeGameManager() {  
+  // This method manages the game state
+  // First it checks on whether the game is idle (0), playing (1), won (2) or lost (3)
+  // Then it does various checks on the trees to see where to place the beacon for game play.
+  // It checks if buttons were pressed incorrectly and makes the game a loss if that happens.
+  // It also manages the game timer, victory animation timer, and the losing timer.
+  
   if (trees_state == 0) {
     // Someone lit the first beacon
     if (!rebroadcast_reset && t1_local_win && !t2_local_win && !t3_local_win && !t4_local_win && !t5_local_win && !t6_local_win && !t7_local_win && !t8_local_win) {
@@ -531,12 +533,14 @@ void hutManager(int button_count){
 }
 
 void weatherManager() {
+  // This method manages the weather, AKA the clouds.
+  // Most of the time the clouds will just be in an idle state of 0.
   // If the hut is also in a winning state, but the treeTimer hasn't elapsed yet, run the tree part of the big win animation.
   if (hut_state == 2 && trees_state == 2 && ((currentTime - treeTimer) < TREE_WIN_DURATION) && (currentTime - hutTimer < HUT_WIN_DURATION) && weather_state != 3) {
     weather_state = 3;
     animationTimer = millis();  // set the animation timer
 
-  // end the animation. Time is elapsed.
+  // end the global win animation. Time is elapsed. Reset whole game.
   } else if (weather_state == 3 && (currentTime - animationTimer > GLOBAL_WIN_DURATION)) {
     resetEntireGame();
 
@@ -586,6 +590,8 @@ void updateServer() {
 }
 
 void updateStatesTogether(){
+  // This just combines the updates into one method. Most of the time they get updated on different timers
+  // But sometimes they get used together, such as after animations play or testing.
   updateSlaves();
   updateServer();
 }
