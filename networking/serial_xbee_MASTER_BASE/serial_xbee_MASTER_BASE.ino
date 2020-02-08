@@ -1,7 +1,8 @@
 // This master lives with the laptop and feeds Unity with all the info it needs. It also sends out lovely data to the trees, clouds, and yurt!
 
 // Declare constants.
-const int TIME_BETWEEN_SLAVE_UPDATES = 100;
+const int TIME_BETWEEN_SLAVE_UPDATES = 50;
+const int TIME_BETWEEN_SERVER_UPDATES = 50;
 const int NUM_TREES = 8;
 const int NUM_HUTS = 1;
 const int NUM_CLOUDS = 2;
@@ -18,7 +19,8 @@ bool rebroadcast_reset = false;
 int rebroadcast_count = 0;
 
 // Declare local variables
-int lastUpdate;
+int lastSlaveUpdate;
+int lastServerUpdate;
 int currentTime;
 String updateFromServerString = "";
 
@@ -95,7 +97,8 @@ void setup() {
   //Begin HW serial - this is the radio.
   Serial1.begin(9600);
   delay(500);
-  lastUpdate = millis();
+  lastSlaveUpdate = millis();
+  lastServerUpdate = millis();
 
   resetAllTreesState();
   resetAllHutState();
@@ -448,9 +451,12 @@ void treeGameManager() {
       } else if (t1_local_win & t2_local_win & t3_local_win & t4_local_win & t5_local_win & t6_local_win & t7_local_win & t8_local_win) {
         trees_state = 2;
         treeTimer = millis();  // set timer for victory animation
-        
+      }else{
+        trees_state = trees_state;
+      }
+      
       // Game Over. if the buttons are pressed incorrectly. Fail condition is: Tree isn't beacon and isn't won.
-      } else if(
+      if(
         (trees_current_beacon!='C' && !t1_local_win && t1_button_state_normalized) || 
         (trees_current_beacon!='D' && !t2_local_win && t2_button_state_normalized) || 
         (trees_current_beacon!='E' && !t3_local_win && t3_button_state_normalized) || 
@@ -460,22 +466,19 @@ void treeGameManager() {
         (trees_current_beacon!='I' && !t7_local_win && t7_button_state_normalized) || 
         (trees_current_beacon!='J' && !t8_local_win && t8_button_state_normalized)
         ){
-        Serial.println(trees_current_beacon);
-        Serial.println(t3_local_win);
-        Serial.println(t3_button_state_normalized);
-        delay(5000);
-        
-        trees_state = 3;
-        treeTimer = millis(); // set timer for failure animation
-        rebroadcast_reset = true;
-        rebroadcast_count = 0;
-        updateSlaves();
-        updateServer();  // force update
-      }else{
-        trees_state = trees_state;
-      }
+          // Just for testing.
+          Serial.println("Wrong button!");
+          delay(5000);
+          
+          trees_state = 3;
+          treeTimer = millis(); // set timer for failure animation
+          rebroadcast_reset = true;
+          rebroadcast_count = 0;
+          updateSlaves();
+          updateServer();  // force update
+        }
     // Game over: Ran out of time. Run fail animation.
-    }else {
+    }else{
       trees_state = 3;
       treeTimer = millis(); // set timer for failure animation
       rebroadcast_reset = true;
@@ -484,7 +487,7 @@ void treeGameManager() {
       updateServer();  // force update
     }
 
-    // Run the tree victory animation for t=TREE_WIN_DURATION
+  // Run the tree victory animation for t=TREE_WIN_DURATION
   } else if (trees_state == 2) {
     // Victory animation has elapsed - reset the trees. Do nothing if it's not done.
     if (currentTime - treeTimer > TREE_WIN_DURATION) {
@@ -493,7 +496,7 @@ void treeGameManager() {
       rebroadcast_count = 0;
     }
 
-    // End the tree failure animation after t=TREES_FAIL_ANIMATION_DURATION
+  // End the tree failure animation after t=TREES_FAIL_ANIMATION_DURATION
   } else if (trees_state == 3 && (currentTime - treeTimer > TREES_FAIL_ANIMATION_DURATION)) {
     resetAllTreesState();
     rebroadcast_reset = true;
@@ -615,24 +618,27 @@ void loop() {
   }
 
   currentTime = millis();
-  // put your main code here, to run repeatedly:
-  readUpdateSlaveState();
-  readServerStateUntil();
   treeGameManager();
   weatherManager();
-
-  // determine whether the slaves have been kept waiting too long. If they have, update them.
   
+  // determine whether the slaves have been kept waiting too long. If they have, update them.
   if ((currentTime - lastUpdate)  > TIME_BETWEEN_SLAVE_UPDATES) {
     updateSlaves();
-    updateServer();  // sanity checking
-    lastUpdate = currentTime;
+    lastSlaveUpdate = currentTime;
     if (rebroadcast_reset<BROADCAST_RESET_N_TIMES && rebroadcast_reset){
       rebroadcast_count++;
     }
-    if(rebroadcast_reset==BROADCAST_RESET_N_TIMES && rebroadcast_reset){
+    if(rebroadcast_reset>=BROADCAST_RESET_N_TIMES && rebroadcast_reset){
       rebroadcast_reset = false;
     }
-    }
-  
+  }
+  // update the server
+  if ((currentTime - lastUpdate)  > TIME_BETWEEN_SERVER_UPDATES) {
+    updateServer();
+    lastServerUpdate = currentTime;
+  }  
+
+  readUpdateSlaveState();
+  readServerStateUntil();
+}
 }
