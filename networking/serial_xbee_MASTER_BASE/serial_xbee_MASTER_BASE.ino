@@ -83,6 +83,7 @@ bool t8_button_state_normalized = false;
 
 // Hut ID K
 int hut_state = 0;  // idle/playing/win/lose (0,1,2,3)
+int hut_buttons[5] = {false, false, false, false,false};
 
 // TODO: Class-based state management. UPDATE: In progress.
 
@@ -113,88 +114,73 @@ bool testGames(){
   Serial.println("Testing the beacon assignments.");
   trees_current_beacon = 'C';
   treeGameManager();
-  updateSlaves();
-  updateServer();
+  updateStatesTogether();
   delay(1000);
   trees_current_beacon = 'D';
   treeGameManager();
-  updateSlaves();
-  updateServer();
+  updateStatesTogether();
   delay(1000);
   trees_current_beacon = 'E';
   treeGameManager();
-  updateSlaves();
-  updateServer();
+  updateStatesTogether();
   delay(1000);
   trees_current_beacon = 'F';
   treeGameManager();
-  updateSlaves();
-  updateServer();
+  updateStatesTogether();
   delay(1000);
   trees_current_beacon = 'G';
   treeGameManager();
-  updateSlaves();
-  updateServer();
+  updateStatesTogether();
   delay(1000);
   trees_current_beacon = 'H';
   treeGameManager();
-  updateSlaves();
-  updateServer();
+  updateStatesTogether();
   delay(1000);
   trees_current_beacon = 'I';
   treeGameManager();
-  updateSlaves();
-  updateServer();
+  updateStatesTogether();
   delay(1000);
   trees_current_beacon = 'J';
   treeGameManager();
-  updateSlaves();
-  updateServer();
+  updateStatesTogether();
   delay(1000);
   
   // Testing Tree victory state management
   Serial.println("Resetting Game and testing local win states to see that the game is won under correct conditions. Game timer currently set to 60 seconds.");
   resetAllTreesState();
   treeGameManager();
-  updateSlaves();
-  updateServer();
+  updateStatesTogether();
   delay(1000);
   t1_local_win = true;
   treeGameManager();
-  updateSlaves();
-  updateServer();
+  updateStatesTogether();
   Serial.print("Asserting tree_state == 1: ");
   Serial.println(trees_state==1);
   delay(1000);
   t2_local_win = true;
   treeGameManager();
   delay(100);
-  updateSlaves();
-  updateServer();
+  updateStatesTogether());
   delay(1000);
   t3_local_win = true;
   treeGameManager();
   delay(100);
-  updateSlaves();
-  updateServer();
+  updateStatesTogether();
   delay(1000);
   t4_local_win = true;
   treeGameManager();
   delay(100);
-  updateSlaves();
-  updateServer();
+  updateStatesTogether();
   delay(1000);
   t5_local_win = true;
   treeGameManager();
   delay(100);
-  updateSlaves();
-  updateServer();
+  updateStatesTogether();
   delay(1000);
   t6_local_win = true;
   treeGameManager();
   delay(100);
-  updateSlaves();
-  updateServer();
+  updateStatesTogether();
   delay(1000);
   t7_local_win = true;
   treeGameManager();
@@ -208,8 +194,7 @@ bool testGames(){
   currentTime = millis();
   Serial.print("Asserting that tree_state == 2 to signal game won: ");
   Serial.println(trees_state==2);
-  updateSlaves();
-  updateServer();
+  updateStatesTogether();
   Serial.println("Check for trees victory animation. Please wait and watch for ");
   Serial.print(TREE_WIN_DURATION);
   Serial.println(" ms for it to complete.");
@@ -220,17 +205,14 @@ bool testGames(){
   Serial.println(" ms for it to complete.");
   resetAllTreesState();  // reset game 
   treeGameManager();
-  updateSlaves();
-  updateServer();
+  updateStatesTogether();
   t1_local_win = true;
   treeGameManager();
-  updateSlaves();
-  updateServer();
+  updateStatesTogether();
   delay(TIME_LIMIT+1000);
   currentTime = millis();
   treeGameManager();
-  updateSlaves();
-  updateServer();
+  updateStatesTogether();
   Serial.print("Assert game state is now 3 to signal failure: ");
   Serial.println(trees_state==3);
   
@@ -240,8 +222,7 @@ bool testGames(){
   delay(TREES_FAIL_ANIMATION_DURATION);
   
   treeGameManager();
-  updateSlaves();
-  updateServer();
+  updateStatesTogether();
   Serial.print("Assert game state is now 0 to signal automatic timed reset: ");
   Serial.println(trees_state==0);
 
@@ -254,8 +235,7 @@ bool testGames(){
   hutTimer = millis();
   currentTime = millis();
   weatherManager();
-  updateSlaves();
-  updateServer();
+  updateStatesTogether();
   Serial.print("Asserting that weather state == 3: ");
   Serial.println(weather_state==3);
   Serial.print("Please wait and watch the global win animation for: ");
@@ -269,9 +249,8 @@ bool testGames(){
   weatherManager();
   Serial.print("Animation completion check: Asserting that weather state == 0: ");
   Serial.println(weather_state==0);
-  resetAllTreesState();
-  resetAllHutState();
-  resetWeatherState();
+  resetEntireGame();
+  updateStatesTogether();
 
   Serial.println("Testing complete. If any errors visible, please hurry and fix them. <3 <3 <3");
   doTestOnStartup = false;
@@ -336,14 +315,22 @@ void resetWeatherState(){
   weather_state = 0;
 }
 
+void resetEntireGame(){
+  resetAllHutState();
+  resetWeatherState();
+  resetAllTreesState();
+}
+
 
 void readUpdateSlaveState() {
   // This method reads the states from Slaves as they come in, and updates states.
   if (Serial1.available()) {
     String s = Serial1.readStringUntil('\n');
-    Serial.println(s);
+//    Serial.println(s);
     s.trim();  // trim that newline off
     int strSize = s.length();
+
+    // Check validity to ensure it's a Tree update.
     if ((strSize == 5) && (s.indexOf('{') == 0) && (s.indexOf('}') == 4)) {
       char switchChar = (char) s[1];
       
@@ -351,12 +338,13 @@ void readUpdateSlaveState() {
         trees_button = (char) s[3];
         // directly send button?
       }
+      
       switch (switchChar) {
         // Tree state updates
         case 'C':
           // cast a char containing an int to its corresponding int by getting the distance from the '0' char
           // '1' - '0' -> 1  but only 0 to 9.
-          // There's another -48 thing but screw that.
+          // There's another -48 tactic but this works.
           t1_local_win = (s[2]-'0');
           update_button_pressed((s[3]-'0'), t1_button_pressed, t1_button_state_normalized);
           break;
@@ -391,14 +379,25 @@ void readUpdateSlaveState() {
         default:
           break;
       }
-    } else {
+    // Check validity to see if it's a Hut update
+    } else if((strSize == 8) && s[1]=='K' && (s.indexOf('{') == 0) && (s.indexOf('}') == 5)){
+      // Loop and update the hut buttons array. s[2] is first button.
+      for (i=0; i<5; i++){
+        hut_buttons[i] = (s[i+2]-'0');
+      }
+    }else {
       Serial.flush();
+      Serial1.flush();
     }
   }
 }
 
 
 void update_button_pressed(bool button_state, bool historical_btn_array[], bool button_state_normalized){  
+  // This method receives the button state, button tracking array, and button_state_normalized which is used for the actual state string as parameters
+  // It does additional debouncing essentially, to make sure that the button only triggers noise when the button is pressed at first, 
+  // rather than nonstop quacking on a button hold.
+  
   if(button_state != historical_btn_array[0] && button_state !=historical_btn_array[1]){
       button_state_normalized = button_state;
   }
@@ -417,9 +416,9 @@ void treeGameManager() {
       trees_current_beacon = 'D'; // light up t2
     }
   } else if (trees_state == 1) {
-    if((currentTime - gameTimer)%500==0){
-      Serial.println(currentTime - gameTimer);
-    } 
+//    if((currentTime - gameTimer)%500==0){
+//      Serial.println(currentTime - gameTimer);
+//    } 
     
     if (currentTime - gameTimer < TIME_LIMIT) {
       // beacon 1-2 local_win is good, set the next beacon
@@ -455,7 +454,7 @@ void treeGameManager() {
         trees_state = trees_state;
       }
       
-      // Game Over. if the buttons are pressed incorrectly. Fail condition is: Tree isn't beacon and isn't won.
+      // Game Over if the buttons are pressed incorrectly. Fail condition is: Tree isn't beacon and isn't won.
       if(
         (trees_current_beacon!='C' && !t1_local_win && t1_button_state_normalized) || 
         (trees_current_beacon!='D' && !t2_local_win && t2_button_state_normalized) || 
@@ -477,13 +476,14 @@ void treeGameManager() {
           updateSlaves();
           updateServer();  // force update
         }
+        
     // Game over: Ran out of time. Run fail animation.
     }else{
       trees_state = 3;
       treeTimer = millis(); // set timer for failure animation
       rebroadcast_reset = true;
       rebroadcast_count = 0;
-      updateSlaves();
+      updateSlaves();   // force update without waiting for next update round
       updateServer();  // force update
     }
 
@@ -517,10 +517,7 @@ void weatherManager() {
 
   // end the animation. Time is elapsed.
   } else if (weather_state == 3 && (currentTime - animationTimer > GLOBAL_WIN_DURATION)) {
-    trees_state = 0;
-    trees_current_beacon = 'C';
-    hut_state = 0;
-    weather_state = 0;
+    resetEntireGame();
 
   // just keep going. Mostly a placeholder. Not very good code to use an else like this, but there's not really another state.
   } else {
@@ -559,8 +556,17 @@ void updateServer() {
   Serial.print(t6_button_state_normalized);
   Serial.print(t7_button_state_normalized);
   Serial.print(t8_button_state_normalized);
-  Serial.print(hut_button);
+  Serial.print(hut_button[0]);
+  Serial.print(hut_button[1]);
+  Serial.print(hut_button[2]);
+  Serial.print(hut_button[3]);
+  Serial.print(hut_button[4]);
   Serial.println("}");  
+}
+
+void updateStatesTogether(){
+  updateSlaves();
+  updateServer();
 }
 
 
