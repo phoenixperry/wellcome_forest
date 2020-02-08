@@ -430,8 +430,35 @@ void treeGameManager() {
 //    if((currentTime - gameTimer)%500==0){
 //      Serial.println(currentTime - gameTimer);
 //    } 
+
+    
     
     if (currentTime - gameTimer < TIME_LIMIT) {
+
+      // Game Over if the buttons are pressed incorrectly. Fail condition is: Tree isn't beacon and isn't won. Has to be before beacons get moved.
+      if(
+        (trees_current_beacon!='C' && !t1_local_win && t1_button_state_normalized) || 
+        (trees_current_beacon!='D' && !t2_local_win && t2_button_state_normalized) || 
+        (trees_current_beacon!='E' && !t3_local_win && t3_button_state_normalized) || 
+        (trees_current_beacon!='F' && !t4_local_win && t4_button_state_normalized) || 
+        (trees_current_beacon!='G' && !t5_local_win && t5_button_state_normalized) || 
+        (trees_current_beacon!='H' && !t6_local_win && t6_button_state_normalized) || 
+        (trees_current_beacon!='I' && !t7_local_win && t7_button_state_normalized) || 
+        (trees_current_beacon!='J' && !t8_local_win && t8_button_state_normalized)
+        )
+      {
+        // Just for testing.
+        Serial.println("Wrong button!");
+        delay(5000);
+        
+        trees_state = 3;
+        treeTimer = millis(); // set timer for failure animation
+        rebroadcast_reset = true;
+        rebroadcast_count = 0;
+        updateSlaves();
+        updateServer();  // force update
+      }
+      
       // beacon 1-2 local_win is good, set the next beacon
       if (t1_local_win & t2_local_win & !t3_local_win & !t4_local_win & !t5_local_win & !t6_local_win & !t7_local_win & !t8_local_win) {
         trees_current_beacon = 'E';
@@ -465,28 +492,7 @@ void treeGameManager() {
         trees_state = trees_state;
       }
       
-      // Game Over if the buttons are pressed incorrectly. Fail condition is: Tree isn't beacon and isn't won.
-      if(
-        (trees_current_beacon!='C' && !t1_local_win && t1_button_state_normalized) || 
-        (trees_current_beacon!='D' && !t2_local_win && t2_button_state_normalized) || 
-        (trees_current_beacon!='E' && !t3_local_win && t3_button_state_normalized) || 
-        (trees_current_beacon!='F' && !t4_local_win && t4_button_state_normalized) || 
-        (trees_current_beacon!='G' && !t5_local_win && t5_button_state_normalized) || 
-        (trees_current_beacon!='H' && !t6_local_win && t6_button_state_normalized) || 
-        (trees_current_beacon!='I' && !t7_local_win && t7_button_state_normalized) || 
-        (trees_current_beacon!='J' && !t8_local_win && t8_button_state_normalized)
-        ){
-          // Just for testing.
-          Serial.println("Wrong button!");
-          delay(5000);
-          
-          trees_state = 3;
-          treeTimer = millis(); // set timer for failure animation
-          rebroadcast_reset = true;
-          rebroadcast_count = 0;
-          updateSlaves();
-          updateServer();  // force update
-        }
+      
         
     // Game over: Ran out of time. Run fail animation.
     }else{
