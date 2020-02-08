@@ -25,6 +25,7 @@ int lightPin = 11;
 
 void setup() {
   Serial1.begin(9600);
+  Serial.begin(9600);
   pinMode(lightPin, OUTPUT);
   digitalWrite(lightPin, LOW);
 }
@@ -48,6 +49,7 @@ void readServerState(){
       updateFromServerString = updateFromServerString + cha;
       updateFromServerString.trim();
       int strSize = updateFromServerString.length();
+      Serial.print(updateFromServerString);
       if((strSize==(2+NUM_STATES*NUM_OBJECTS) && (updateFromServerString.indexOf('{')==0) && (updateFromServerString.indexOf('}')==(2+NUM_STATES*NUM_OBJECTS-1)))){
         // extract substring for this object
         updateStringStartIndex = updateFromServerString.indexOf(ID);  // find which part of the string belongs to this object
