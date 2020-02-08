@@ -112,6 +112,9 @@ void setup()
 	delay(100);
 	FastLED.addLeds<WS2812B, LED_PIN, GRB>(leds, NUM_LEDS);
 
+	// there is one sender and 5 receiver units. Distinguish by mac address. 
+	// The sender sits on the board next to the teensy and receives button states via serial, 
+	// and sends that onwards to all the other ESP chips via the ESPNow protocol.
 	receiverUnit = !(WiFi.softAPmacAddress().equals("5E:CF:7F:2B:B6:AD"));
 	Serial.print("Set as receiver: "); Serial.println(receiverUnit);
 	Serial.print("This node AP mac: "); Serial.println(WiFi.softAPmacAddress());
