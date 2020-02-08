@@ -379,12 +379,21 @@ void readUpdateSlaveState() {
         default:
           break;
       }
+      
     // Check validity to see if it's a Hut update
     } else if((strSize == 8) && s[1]=='K' && (s.indexOf('{') == 0) && (s.indexOf('}') == 5)){
       // Loop and update the hut buttons array. s[2] is first button.
+      // Then 
+      int button_count = 0;
       for (i=0; i<5; i++){
-        hut_buttons[i] = (s[i+2]-'0');
+        int value = (s[i+2]-'0')
+        hut_buttons[i] = value;
+        button_count += value;
       }
+      
+      // Update the hut status represented locally.
+      hutManager(button_count);
+      
     }else {
       Serial.flush();
       Serial1.flush();
@@ -509,6 +518,18 @@ void treeGameManager() {
   }
 }
 
+void hutManager(int button_count){
+  // Update the hut status represented locally.
+  // The hut code ignores this part of the broadcast currently, as it runs quite autonomously, but a future version may want more coordination.
+  if (button_count == 5){
+    hut_state = 2;
+  }else if(button_count>0){
+    hut_state = 1;
+  }else{
+    hut_state = 0;
+  }
+}
+
 void weatherManager() {
   // If the hut is also in a winning state, but the treeTimer hasn't elapsed yet, run the tree part of the big win animation.
   if (hut_state == 2 && trees_state == 2 && ((currentTime - treeTimer) < TREE_WIN_DURATION) && (currentTime - hutTimer < HUT_WIN_DURATION) && weather_state != 3) {
@@ -527,7 +548,7 @@ void weatherManager() {
 
 
 void updateSlaves() {
-  // This method sends over radio the state string
+  // This method sends over radio the state string for coordination.
   // {0A10} {tree state, trees beacon, hut state, weather state}
     Serial1.print("{");
     Serial1.print(ID);
@@ -540,8 +561,8 @@ void updateSlaves() {
 
 
 void updateServer() {
-  // This method sends over radio the state string
-  // {0C10C0} {tree state, trees beacon, hut state, weather state, trees_button, hut_button}
+  // This method sends over radio the state string. It's long, but since there are fewer things going through the Serial cable, we should be able to get away with it.
+  // {0C100000000011111} {tree state, trees beacon, hut state, weather state, trees_button[0:8], hut_button[0:5]}
   Serial.print("{");
   Serial.print(ID);
   Serial.print(trees_state);
