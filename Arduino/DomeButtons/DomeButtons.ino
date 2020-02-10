@@ -2,7 +2,17 @@
 
 // designed to run on a Teensy that has an Xbee connected on Serial1, and optionally an ESP8266 on Serial2 (for additional effects), and two LED strips with 180 pixel each.
 
-// LED strip layout is still to be finalized!
+// LED strip layout:
+
+
+//                strip 1                              strip 2 (with masking tape)       extra strip at end
+// [ ================================ ] Arduino [ ==================================== | ================== ]
+//           |                  |                          |                      |                    |
+// LEDPos: Button 3          Button 4                   Button 5               Button 2             Button 1
+
+// The LEDPos is on the opposite side of the dome from where the actual button is. 
+  
+
 // each button has 72 LEDs.
 
 // there are two LED strips on this controller, one is 5 meters (going clockwise from the arduino), 
@@ -27,8 +37,23 @@ const int buttonPins[] = { 15, 16,17,18,19 };
 int buttonState[] = { 0,0,0,0,0 };
 float buttonPower[] = { 0,0,0,0,0 };
 
+const int ledsPerDomeSegment = 34; // 30 leds per meter, one segment is roughly 116 cm. tweak if necessary
+const int halfDomeSegment = 17; // 30 leds per meter, one segment is roughly 116 cm. tweak if necessary
+
 int buttonCenterHue[] = {20, 70, 130, 172, 200};
-int buttonCenterPixelPos[] = {-114,-42,30, 102, 174};
+int buttonCenterTargetHue[] = {20, 70, 130, 172, 200};
+int buttonCenterCurrentHue[] = {20, 70, 130, 172, 200};
+int buttonCenterHueSpring[] = {224, 130, 190, 64, 96};
+int buttonCenterHueRain[] = {160, 130, 140, 180, 150};
+int buttonCenterHueFall[] = {20, 50, 0, 230, 30};
+float hueFader = 0;
+
+int buttonCenterPixelPos[] = {
+	halfDomeSegment + 5 * ledsPerDomeSegment, 
+	halfDomeSegment + 3 * ledsPerDomeSegment,
+	- (halfDomeSegment + 2 * ledsPerDomeSegment),
+	- (halfDomeSegment),
+	halfDomeSegment + ledsPerDomeSegment};
 Bounce pushButtons[5];
 
 bool win = false;      // winning the hut game (i.e., all 5 buttons pressed at the same time. Game shows winning animation for winDuration milliseconds)
@@ -48,6 +73,12 @@ long previousTime = 0;
 long regularUpdateTimer = 1000;
 
 int fps = 0;
+
+const int SPRING = 0;
+const int FALL = 1;
+const int RAIN = 2;
+
+int weather = SPRING;
 
 void setup() 
 {
@@ -76,6 +107,16 @@ void setPixel(int pos, CRGB col)
 	else if (pos >= 0 && pos < NUM_LEDS2)
 	{
 		leds2[pos] = col;
+	}
+	else if (pos >= NUM_LEDS2 && pos < NUM_LEDS2 + NUM_LEDS1)
+	{
+		// wrap around at the positive end
+		leds1[NUM_LEDS1 - 1 - (pos - NUM_LEDS2)] = col;
+	}
+	else if (pos < -NUM_LEDS1 && pos > -(NUM_LEDS1 + NUM_LEDS2))
+	{
+		// wrap around the negative end
+		leds2[NUM_LEDS2 - 1 - (-pos - NUM_LEDS1)] = col;
 	}
 }
 
@@ -175,9 +216,22 @@ void checkXBee()
 
 	while (Serial1.available() > 0 && Serial1.peek() != '{') Serial1.read(); // discard the rest until the next '{'
 
-	int weather = s[3] - 48;
+	weather = s[3] - 48;
 
-	if (weather == 2)
+	if (weather >= 0 && weather <= 2)
+	{
+		// swap palette
+		for (int i = 0; i < 5; ++i)
+		{
+			if (weather == SPRING) buttonCenterTargetHue[i] = buttonCenterHueSpring[i];
+			if (weather == FALL) buttonCenterTargetHue[i] = buttonCenterHueFall[i];
+			if (weather == RAIN) buttonCenterTargetHue[i] = buttonCenterHueRain[i];
+			hueFader = 0;
+		}
+	}
+
+
+	if (weather == 3)
 	{
 		// superwin!
 		Serial.println("Received Superwin!! Whoa!");
@@ -233,6 +287,31 @@ void drawButtonEffects()
 {
 	int buttonsPressed = 0;
 	float decaySpeed = 3.0f;
+
+	if (hueFader < 1)
+	{
+		hueFader += dt / 1000.0;
+		if (hueFader >= 1)
+		{
+			hueFader = 1;
+			for (int i = 0; i < 5; ++i)
+			{
+				buttonCenterHue[i] = buttonCenterTargetHue[i];
+				buttonCenterCurrentHue[i] = buttonCenterHue[i];
+			}
+		}
+		else
+		{
+			for (int i = 0; i < 5; ++i)
+			{
+				int hue = buttonCenterHue[i] * hueFader + (1.0f - hueFader) * buttonCenterTargetHue[i];
+				if (hue > 255) hue = 255;
+				buttonCenterCurrentHue[i] = hue;
+			}
+		}
+	}
+
+
 	for (int i = 0; i < 5; i++)
 	{
 		buttonsPressed += buttonState[i];
@@ -250,8 +329,8 @@ void drawButtonEffects()
 		for (int x = 0; x <= 36; x++)
 		{
 			float sineModifier = sin(millis() / 100.0f + buttonCenterPixelPos[i] / 10.0f) + 1;
-			setPixel(buttonCenterPixelPos[i] - x, CHSV(buttonCenterHue[i], 180 + x * sineModifier, int((180.0f + x * sineModifier)) * buttonPower[i]));
-			setPixel(buttonCenterPixelPos[i] + x, CHSV(buttonCenterHue[i], 180 + x * sineModifier, int((180.0f + x * sineModifier)) * buttonPower[i]));
+			setPixel(buttonCenterPixelPos[i] - x, CHSV(buttonCenterCurrentHue[i], 180 + x * sineModifier, int((180.0f + x * sineModifier)) * buttonPower[i]));
+			setPixel(buttonCenterPixelPos[i] + x, CHSV(buttonCenterCurrentHue[i], 180 + x * sineModifier, int((180.0f + x * sineModifier)) * buttonPower[i]));
 		}
 	}
 

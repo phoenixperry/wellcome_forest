@@ -4,9 +4,10 @@ import time
 if __name__ == "__main__":
     ARD_PORT = "COM11" # COM3 or /dev/ttyACM0
     ser = serial.Serial(ARD_PORT, baudrate=9600, timeout=1)
-    time_between_updates = 0.250  # 250ms
+    time_between_updates = 0.050  # 50ms
     last_update = time.time()
 
+    print(f"Reading on {ARD_PORT}")
     while True:
         radio_state = ser.readline()
         if radio_state:
