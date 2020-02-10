@@ -156,9 +156,6 @@ void loop() {
   else if (tree.state == TreeState::waiting) {
     tree.hue = 100;
     tree.saturation = 240;
-    if (tree.value > 0.2) {
-      tree.value -= 0.02;
-    }
     tree.while_pressed([] { tree.button_was_pressed = false; });
     tree.on_pressed([] {});
     tree.show();
