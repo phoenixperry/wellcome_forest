@@ -1,4 +1,4 @@
-#include <AceRoutine.h>//mutil task lib
+#include <AceRoutine.h>  //mutil task lib
 #define SPEEDPIN 10
 #define IN1 9
 #define IN2 8
@@ -88,7 +88,7 @@ bool is_valid_msg(String msg) {
 
 int get_weather_state(String msg) { 
   // Thanks Mark
-  return msg.charAt(5) - '0'; 
+  return (bool) msg.charAt(5) - '0'; 
 }
 
 void setup() {
