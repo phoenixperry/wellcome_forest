@@ -14,7 +14,7 @@ int global_speed = 1;
  * has an id char, from 'C' - 'J' (C is the initial beacon tree)
  *
  */
-Tree tree('C');
+Tree tree('J');
 
 void setup() {
   // setup Serial

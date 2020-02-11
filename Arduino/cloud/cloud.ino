@@ -102,7 +102,6 @@ void setup() {
 }
 
 void loop() {
-
   while (Serial.available()) {
     String msg = Serial.readStringUntil('\n');
     msg.trim();
@@ -113,6 +112,4 @@ void loop() {
 
   keepupanddown.runCoroutine();
   downquickly.runCoroutine();
-  
-
 }

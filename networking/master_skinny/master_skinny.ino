@@ -77,17 +77,34 @@ void setup() {
   lastServerUpdate = millis();
 }
 
+void zeroTreeButtons(){
+  t1_button_pressed = 0;
+  t2_button_pressed = 0;
+  t3_button_pressed = 0;
+  t4_button_pressed = 0;
+  t5_button_pressed = 0;
+  t6_button_pressed = 0;
+  t7_button_pressed = 0;
+  t8_button_pressed = 0;
+}
 
 void readSlaveState() {
   // This method reads the states from Slaves as they come in, and updates states.
+
   if (Serial1.available()) {
     String s = Serial1.readStringUntil('\n');
     s.trim();  // trim that newline off
     int strSize = s.length();
 
+    // since the trees now only send on button press, we have to zero out the buttons 
+    zeroTreeButtons();
+
+
     // Check validity to ensure it's a Tree update. Could add additional check to see if s[1] is in CDEFGHIJ if needed.
     if ((strSize == 5) && (s.indexOf('{') == 0) && (s.indexOf('}') == 4)) {
       char switchChar = (char) s[1];
+      
+
       
       switch (switchChar) {
         // Tree state updates
@@ -96,35 +113,35 @@ void readSlaveState() {
           // '1' - '0' -> 1  but only 0 to 9.
           // There's another -48 tactic but this works.
           t1_active = (s[2]-'0');
-          update_button_pressed((s[3]-'0'), t1_button_pressed, t1_button_state_normalized);
+          t1_button_pressed = (s[3]-'0');
           break;
         case 'D':
           t2_active = (s[2]-'0');
-          update_button_pressed((s[3]-'0'), t2_button_pressed, t2_button_state_normalized);
+          t2_button_pressed = (s[3]-'0');
           break;
         case 'E':
           t3_active = (s[2]-'0');
-          update_button_pressed((s[3]-'0'), t3_button_pressed, t3_button_state_normalized);
+          t3_button_pressed = (s[3]-'0');
           break;
         case 'F':
           t4_active = (s[2]-'0');
-          update_button_pressed((s[3]-'0'), t4_button_pressed, t4_button_state_normalized);
+          t4_button_pressed = (s[3]-'0');
           break;
         case 'G':
           t5_active = (s[2]-'0');
-          update_button_pressed((s[3]-'0'), t5_button_pressed, t5_button_state_normalized);
+          t5_button_pressed = (s[3]-'0');
           break;
         case 'H':
           t6_active = (s[2]-'0');
-          update_button_pressed((s[3]-'0'), t6_button_pressed, t6_button_state_normalized);
+          t6_button_pressed = (s[3]-'0');
           break;
         case 'I':
           t7_active = (s[2]-'0');
-          update_button_pressed((s[3]-'0'), t7_button_pressed, t7_button_state_normalized);
+          t7_button_pressed = (s[3]-'0');
           break;
         case 'J':
           t8_active = (s[2]-'0');
-          update_button_pressed((s[3]-'0'), t8_button_pressed, t8_button_state_normalized);
+          t8_button_pressed = (s[3]-'0');
           break;
         default:
           break;
@@ -150,20 +167,6 @@ void readSlaveState() {
       Serial1.flush();
     }
   }
-}
-
-
-void update_button_pressed(bool button_state, bool historical_btn_array[], bool button_state_normalized){  
-  // This method receives the button state, button tracking array, and button_state_normalized which is used for the actual state string as parameters
-  // It does additional debouncing essentially, to make sure that the button only triggers noise when the button is pressed at first, 
-  // rather than nonstop quacking on a button hold.
-  
-  if(button_state != historical_btn_array[0] && button_state !=historical_btn_array[1]){
-      button_state_normalized = button_state;
-  }
-
-  historical_btn_array[0] = historical_btn_array[1];
-  historical_btn_array[1] = button_state;
 }
 
 
@@ -194,14 +197,14 @@ void updateServer() {
   Serial.print(t7_active);
   Serial.print(t8_active);
   Serial.print("b");
-  Serial.print(t1_button_state_normalized);
-  Serial.print(t2_button_state_normalized);
-  Serial.print(t3_button_state_normalized);
-  Serial.print(t4_button_state_normalized);
-  Serial.print(t5_button_state_normalized);
-  Serial.print(t6_button_state_normalized);
-  Serial.print(t7_button_state_normalized);
-  Serial.print(t8_button_state_normalized);
+  Serial.print(t1_button_pressed);
+  Serial.print(t2_button_pressed);
+  Serial.print(t3_button_pressed);
+  Serial.print(t4_button_pressed);
+  Serial.print(t5_button_pressed);
+  Serial.print(t6_button_pressed);
+  Serial.print(t7_button_pressed);
+  Serial.print(t8_button_pressed);
   Serial.print("h");
   Serial.print(hut_button[0]);
   Serial.print(hut_button[1]);

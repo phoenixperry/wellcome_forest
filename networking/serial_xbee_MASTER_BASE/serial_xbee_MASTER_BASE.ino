@@ -4,13 +4,8 @@
 
 // DECLARE CONSTANTS
 const char ID = 'Z';
-const int TIME_BETWEEN_SLAVE_UPDATES = 50;
-const int TIME_BETWEEN_SERVER_UPDATES = 50;
-const int NUM_TREES = 8;
-const int NUM_HUTS = 1;
-const int NUM_CLOUDS = 2;
-const int NUM_STATES = 1;  // number of states for each slave
-const int NUM_GLOBAL_STATES = 3;
+const int TIME_BETWEEN_SLAVE_UPDATES = 25;
+const int TIME_BETWEEN_SERVER_UPDATES = 25;
 const long TIME_LIMIT = 60000; // 60000ms = 1 minute timer. This is for the whole game. 
 const long TREE_WIN_DURATION = 30000; // 30s Time allowed for players to get both the win states for the hut and the trees. This should correspond to either's winning animation.
 const long TREES_FAIL_ANIMATION_DURATION = 30000;  // 3 seconds for failure animation
@@ -160,7 +155,7 @@ bool testGames(){
   t2_local_win = true;
   treeGameManager();
   delay(100);
-  updateStatesTogether());
+  updateStatesTogether();
   delay(1000);
   t3_local_win = true;
   treeGameManager();
@@ -326,7 +321,7 @@ void readUpdateSlaveState() {
   // This method reads the states from Slaves as they come in, and updates states.
   if (Serial1.available()) {
     String s = Serial1.readStringUntil('\n');
-//    Serial.println(s);
+    Serial.println(s);
     s.trim();  // trim that newline off
     int strSize = s.length();
 
@@ -381,8 +376,8 @@ void readUpdateSlaveState() {
       // Then tell the hut manager to update
       
       int button_count = 0;
-      for (i=0; i<5; i++){
-        int value = (s[i+2]-'0')
+      for (int i=0; i<5; i++){
+        int value = (s[i+2]-'0');
         hut_buttons[i] = value;
         button_count += value;
       }
@@ -421,20 +416,13 @@ void treeGameManager() {
   
   if (trees_state == 0) {
     // Someone lit the first beacon
-    if (!rebroadcast_reset && t1_local_win && !t2_local_win && !t3_local_win && !t4_local_win && !t5_local_win && !t6_local_win && !t7_local_win && !t8_local_win) {
+    if (t1_local_win && !t2_local_win && !t3_local_win && !t4_local_win && !t5_local_win && !t6_local_win && !t7_local_win && !t8_local_win) {
       gameTimer = millis();
       trees_state = 1;  // tree game playing
       trees_current_beacon = 'D'; // light up t2
     }
   } else if (trees_state == 1) {
-//    if((currentTime - gameTimer)%500==0){
-//      Serial.println(currentTime - gameTimer);
-//    } 
-
-    
-    
     if (currentTime - gameTimer < TIME_LIMIT) {
-
       // Game Over if the buttons are pressed incorrectly. Fail condition is: Tree isn't beacon and isn't won. Has to be before beacons get moved.
       if(
         (trees_current_beacon!='C' && !t1_local_win && t1_button_state_normalized) || 
@@ -587,11 +575,11 @@ void updateServer() {
   Serial.print(t6_button_state_normalized);
   Serial.print(t7_button_state_normalized);
   Serial.print(t8_button_state_normalized);
-  Serial.print(hut_button[0]);
-  Serial.print(hut_button[1]);
-  Serial.print(hut_button[2]);
-  Serial.print(hut_button[3]);
-  Serial.print(hut_button[4]);
+  Serial.print(hut_buttons[0]);
+  Serial.print(hut_buttons[1]);
+  Serial.print(hut_buttons[2]);
+  Serial.print(hut_buttons[3]);
+  Serial.print(hut_buttons[4]);
   Serial.println("}");  
 }
 
@@ -661,23 +649,22 @@ void loop() {
   weatherManager();
   
   // determine whether the slaves have been kept waiting too long. If they have, update them.
-  if ((currentTime - lastUpdate)  > TIME_BETWEEN_SLAVE_UPDATES) {
+  if ((currentTime - lastSlaveUpdate)  > TIME_BETWEEN_SLAVE_UPDATES) {
     updateSlaves();
     lastSlaveUpdate = currentTime;
-    if (rebroadcast_reset<BROADCAST_RESET_N_TIMES && rebroadcast_reset){
-      rebroadcast_count++;
-    }
-    if(rebroadcast_reset>=BROADCAST_RESET_N_TIMES && rebroadcast_reset){
-      rebroadcast_reset = false;
-    }
+//    if (rebroadcast_reset<BROADCAST_RESET_N_TIMES && rebroadcast_reset){
+//      rebroadcast_count++;
+//    }
+//    if(rebroadcast_reset>=BROADCAST_RESET_N_TIMES && rebroadcast_reset){
+//      rebroadcast_reset = false;
+//    }
   }
   // update the server
-  if ((currentTime - lastUpdate)  > TIME_BETWEEN_SERVER_UPDATES) {
+  if ((currentTime - lastServerUpdate)  > TIME_BETWEEN_SERVER_UPDATES) {
     updateServer();
     lastServerUpdate = currentTime;
   }  
 
   readUpdateSlaveState();
   readServerStateUntil();
-}
 }
