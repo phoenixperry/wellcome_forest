@@ -4,7 +4,7 @@
 
 // DECLARE CONSTANTS
 const char ID = 'Z';
-const int TIME_BETWEEN_SLAVE_UPDATES = 50;
+const int TIME_BETWEEN_SLAVE_UPDATES = 20;
 const int TIME_BETWEEN_SERVER_UPDATES = 20;
 
 // DECLARE VARIABLES
@@ -24,43 +24,35 @@ char trees_current_beacon = 'C'; // ID of lit tree
 
 char t1_id = 'C';
 bool t1_active = 0;
-bool t1_button_pressed[2] = {false, false};
-bool t1_button_state_normalized = false;
+bool t1_button_pressed = false;
 
 char t2_id = 'D';
 bool t2_active = 0;
-bool t2_button_pressed[2] = {false, false};
-bool t2_button_state_normalized = false;
+bool t2_button_pressed = false;
 
 char t3_id = 'E';
 bool t3_active = 0;
-bool t3_button_pressed[2] = {false, false};
-bool t3_button_state_normalized = false;
+bool t3_button_pressed = false;
 
 char t4_id = 'F';
 bool t4_active = 0;
-bool t4_button_pressed[2] = {false, false};
-bool t4_button_state_normalized = false;
+bool t4_button_pressed = false;
 
 char t5_id = 'G';
 bool t5_active = 0;
-bool t5_button_pressed[2] = {false, false};
-bool t5_button_state_normalized = false;
+bool t5_button_pressed = false;
 
 char t6_id = 'H';
 bool t6_active = 0;
-bool t6_button_pressed[2] = {false, false};
-bool t6_button_state_normalized = false;
+bool t6_button_pressed = false;
 
 char t7_id = 'I';
 bool t7_active = 0;
-bool t7_button_pressed[2] = {false, false};
-bool t7_button_state_normalized = false;
+bool t7_button_pressed = false;
 
 char t8_id = 'J';
 bool t8_active = 0;
-bool t8_button_pressed[2] = {false, false};
-bool t8_button_state_normalized = false;
+bool t8_button_pressed = false;
 
 // Hut ID K
 int hut_state = 0;  // idle/playing/win/lose (0,1,2,3)
@@ -96,7 +88,7 @@ void readSlaveState() {
     s.trim();  // trim that newline off
     int strSize = s.length();
 
-    // since the trees now only send on button press, we have to zero out the buttons 
+    // since the trees now only send on button press, we have to zero out the buttons as they never send a non-press
     zeroTreeButtons();
 
 
@@ -153,14 +145,12 @@ void readSlaveState() {
       // Then tell the hut manager to update
       
       int button_count = 0;
-      for (i=0; i<5; i++){
-        int value = (s[i+2]-'0')
+      for (int i=0; i<5; i++){
+        int value = (s[i+2]-'0');
         hut_buttons[i] = value;
         button_count += value;
       }
       
-      // Update the hut status represented locally.
-      hutManager(button_count);
       
     }else {
       Serial.flush();
@@ -206,11 +196,11 @@ void updateServer() {
   Serial.print(t7_button_pressed);
   Serial.print(t8_button_pressed);
   Serial.print("h");
-  Serial.print(hut_button[0]);
-  Serial.print(hut_button[1]);
-  Serial.print(hut_button[2]);
-  Serial.print(hut_button[3]);
-  Serial.print(hut_button[4]);
+  Serial.print(hut_buttons[0]);
+  Serial.print(hut_buttons[1]);
+  Serial.print(hut_buttons[2]);
+  Serial.print(hut_buttons[3]);
+  Serial.print(hut_buttons[4]);
   Serial.println("}");  
 }
 
@@ -230,7 +220,6 @@ void readServerStateUntil() {
         trees_current_beacon = updateFromServerString[3]-'0';
         hut_state = updateFromServerString[4]-'0';
         weather_state = updateFromServerString[5]-'0';
-      server_weather_state = updateFromServerString[1] -'0';  // not even sure there will be any communication server -> arduinos. 
     } else {
       Serial.flush();
       Serial1.flush();

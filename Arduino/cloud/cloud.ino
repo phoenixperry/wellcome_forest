@@ -6,7 +6,7 @@
 int speed;
 bool finish = false;  //make sure always only one task running. // upanddownstatus
 bool Finish = true;  // downquickly status
-bool somestate = false;//unity control the state switch
+int somestate = 0;//unity control the state switch
 
 
 void forward(){
@@ -31,7 +31,7 @@ void brake(){
 ////////////////////////////////////
 COROUTINE(keepupanddown){
   COROUTINE_LOOP() {
-    if(!somestate&&Finish){
+    if(somestate<3 && Finish){
       speed = 50;
       COROUTINE_DELAY_SECONDS(1);
       finish = false;
@@ -57,7 +57,7 @@ COROUTINE(keepupanddown){
 
 COROUTINE(downquickly){
   COROUTINE_LOOP() {
-     if(somestate&&finish){
+     if(somestate==3&&finish){
       speed = 100;
       COROUTINE_DELAY_SECONDS(1);
       Finish = false;
@@ -87,8 +87,8 @@ bool is_valid_msg(String msg) {
 }
 
 int get_weather_state(String msg) { 
-  // Thanks Mark
-  return (bool) msg.charAt(5) - '0'; 
+  // Thanks Mark. This will be a 0 or 3.
+  return (int) msg.charAt(5) - '0'; 
 }
 
 void setup() {

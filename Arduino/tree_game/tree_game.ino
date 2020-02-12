@@ -14,7 +14,7 @@ int global_speed = 1;
  * has an id char, from 'C' - 'J' (C is the initial beacon tree)
  *
  */
-Tree tree('J');
+Tree tree('C');
 
 void setup() {
   // setup Serial
@@ -29,7 +29,7 @@ void setup() {
   digitalWrite(BUTTON_OUT, HIGH);
   digitalWrite(BUTTON_LED, HIGH);
   // set initial hue
-  send_state_timer.start(100, AsyncDelay::MILLIS);
+  send_state_timer.start(41, AsyncDelay::MILLIS);
 }
 
 void send_state(Tree tree) {
