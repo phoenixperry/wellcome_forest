@@ -29,7 +29,7 @@ void setup() {
   digitalWrite(BUTTON_OUT, HIGH);
   digitalWrite(BUTTON_LED, HIGH);
   // set initial hue
-  send_state_timer.start(41, AsyncDelay::MILLIS);
+  send_state_timer.start(42, AsyncDelay::MILLIS);
 }
 
 void send_state(Tree tree) {
@@ -66,6 +66,7 @@ void loop() {
     if (is_valid_msg(msg)) {
       Serial.println("recieved valid message");
       int game_state = get_game_state(msg);
+      int weather_state = get_weather_state(msg);
       // START signal
       if (game_state == GameState::start) {
         tree.reset();
@@ -77,12 +78,16 @@ void loop() {
       }
       // WON signal
       else if (game_state == GameState::won) {
-        tree.state = TreeState::win_global;
+        tree.state = TreeState::win_forest;
       }
       // LOST signal
       else if (game_state == GameState::lost) {
         Serial.println("entered lost state");
         tree.state = TreeState::fail;
+      }
+
+      if (weather_state == 3) {
+        tree.state = TreeState::win_global;
       }
     }
     // else {
