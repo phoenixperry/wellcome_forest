@@ -4,13 +4,13 @@
 
 // DECLARE CONSTANTS
 const char ID = 'Z';
-const int TIME_BETWEEN_SLAVE_UPDATES = 25;
+const int TIME_BETWEEN_SLAVE_UPDATES = 10;
 const int TIME_BETWEEN_SERVER_UPDATES = 25;
 const long TIME_LIMIT = 60000; // 60000ms = 1 minute timer. This is for the whole game. 
-const long TREE_WIN_DURATION = 30000; // 30s Time allowed for players to get both the win states for the hut and the trees. This should correspond to either's winning animation.
-const long TREES_FAIL_ANIMATION_DURATION = 30000;  // 3 seconds for failure animation
-const long HUT_WIN_DURATION = 30000; // 30s duration for hut playing animation. This is time for the tree players to also win
-const long GLOBAL_WIN_DURATION = 30000; // 30s for global win state
+const long TREE_WIN_DURATION = 5000; // 30s Time allowed for players to get both the win states for the hut and the trees. This should correspond to either's winning animation.
+const long TREES_FAIL_ANIMATION_DURATION = 5000;  // 3 seconds for failure animation
+const long HUT_WIN_DURATION = 5000; // 30s duration for hut playing animation. This is time for the tree players to also win
+const long GLOBAL_WIN_DURATION = 5000; // 30s for global win state
 const int BROADCAST_RESET_N_TIMES = 3;
 
 // DECLARE VARIABLES
@@ -517,8 +517,7 @@ void treeGameManager() {
 
     // Tree game should keep idling
   } else {
-    trees_state = 0;
-    trees_current_beacon = 'C';
+    trees_state = trees_state;
   }
 }
 
@@ -561,7 +560,7 @@ void updateSlaves() {
     Serial1.print(trees_state);
     Serial1.print(trees_current_beacon);
     Serial1.print(hut_state);
-    Serial1.print(weather_state);
+    Serial1.print(weather_state);  // weather_state
     Serial1.println("}");
 }
 
@@ -574,7 +573,7 @@ void updateServer() {
   Serial.print(trees_state);
   Serial.print(trees_current_beacon);
   Serial.print(hut_state);
-  Serial.print(weather_state);
+  Serial.print(weather_state);  // weather_state
   Serial.print(t1_button_state_normalized);
   Serial.print(t2_button_state_normalized);
   Serial.print(t3_button_state_normalized);
@@ -616,33 +615,6 @@ void readServerStateUntil() {
     }
   }
 }
-
-
-//void readServerState(){
-//  // This reads the state from Unity/ laptop over the Serial port
-//  if(Serial.available()){
-//    char ch;
-//    String cha;
-//    ch = (char) Serial.read();
-//    cha = (String) ch;
-//    if (cha == "{"){
-//      updateFromServerString = cha;
-//    }else if(cha == "\n"){
-//      updateFromServerString = updateFromServerString + cha;
-//      updateFromServerString.trim();
-//      int strSize = updateFromServerString.length();
-//      if((strSize==(2+NUM_STATES*(NUM_TREES+NUM_HUTS+NUM_CLOUDS))) && (updateFromServerString.indexOf('{')==0) && (updateFromServerString.indexOf('}')==(2+NUM_STATES*(NUM_TREES+NUM_HUTS+NUM_CLOUDS)-1))){
-//        Serial1.println(updateFromServerString);
-////        Serial.println(updateFromServerString);
-//      }else{
-//        Serial.flush();
-//        Serial1.flush();
-//      }
-//    }else{
-//      updateFromServerString = updateFromServerString + cha;
-//    }
-//  }
-//}
 
 
 void loop() {

@@ -59,18 +59,18 @@ COROUTINE(downquickly){
   COROUTINE_LOOP() {
      if(somestate==3&&finish){
       speed = 100;
-      COROUTINE_DELAY_SECONDS(1);
+      COROUTINE_DELAY_SECONDS(3);
       Finish = false;
       forward();
-      COROUTINE_DELAY_SECONDS(1);
+      COROUTINE_DELAY_SECONDS(3);
       brake();
-      COROUTINE_DELAY_SECONDS(1);
+      COROUTINE_DELAY_SECONDS(3);
       backward();
-      COROUTINE_DELAY_SECONDS(1);
+      COROUTINE_DELAY_SECONDS(3);
       brake();
-      COROUTINE_DELAY_SECONDS(1);
+      COROUTINE_DELAY_SECONDS(3);
       forward();
-      COROUTINE_DELAY_SECONDS(1);
+      COROUTINE_DELAY_SECONDS(3);
       brake();
       Finish = true;
     }
