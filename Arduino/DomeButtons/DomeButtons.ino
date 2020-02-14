@@ -47,6 +47,12 @@ ButtonPos 5 on Pin:
 
 
 
+Ringbutton that lights up
+    5     2      3     1     4
+
+Pin
+    2     3      4     5     1
+
          BUTTONS
 \  \2/   \1/    \5/   \4/   \3/
 / \/ \/ \/ \ / \/ \/ \/ \/ \/ \
@@ -80,10 +86,12 @@ ButtonPos 5 on Pin:
 CRGB leds1[NUM_LEDS1];
 CRGB leds2[NUM_LEDS2];
 
-const int buttonPins[] = { 15, 16,17,18,19 };
+//const int buttonPins[] = { 15, 16,17,18,19 }; // ORIGINAL MAPPING
+const int buttonPins[] = { 17,16,15,19,18 };
 int buttonState[] = { 0,0,0,0,0 };
 float buttonPower[] = { 0,0,0,0,0 };
 
+const int ringMap[] = {3, 0, 4, 2, 1}; // send a message to ringmap[i] to light up button i
 
 /* standard colors / hue
 0 - lime green  75
@@ -194,7 +202,10 @@ void sendXbee()
 	Serial1.println(s);
 
 	// encode state in a number, each bit is one button
-	int state = buttonState[0] + buttonState[1] * 2 + buttonState[2] * 4 + buttonState[3] * 8 + buttonState[4] * 16;
+	int state = buttonState[ringMap[0]] + buttonState[ringMap[1]] * 2 + buttonState[ringMap[2]] * 4 + buttonState[ringMap[3]] * 8 + buttonState[ringMap[4]] * 16;
+
+	if (win) state += 32;
+	if (superWin) state += 64;
 
 	// send this to Serial3 (pin 8), where an ESP8266 might be connected to control the rings
 	Serial3.write(state);
@@ -291,6 +302,9 @@ void drawWin()
 {
 	int wintime = millis() - timeWin;
 	int brightness = 255;
+	int h1 = 135;
+	int h2 = 224;
+	int counter = millis() / 20;
 	if (superWin && wintime + 1000 > superWinDuration)
 	{
 		brightness = 255 * (superWinDuration - wintime) / 1000;
@@ -301,6 +315,14 @@ void drawWin()
 	}
 	for (int i = -NUM_LEDS1; i < NUM_LEDS2; i++)
 	{
+		int hue = h1 + (h2 - h1) * fmod((float(counter) / float(NUM_LEDS1 + NUM_LEDS2)), 1.0f);
+
+		if (random(100) > 70)
+		{
+			setPixel(i, CHSV(hue, 255, 255));
+		}
+
+		counter++;
 
 		if (random(0, 100) > 95) // sparkle
 			setPixel(i, CRGB(brightness, brightness, brightness));
@@ -334,6 +356,7 @@ void drawButtonEffects()
 {
 	float decaySpeed = 4.0f;
 
+	/*
 
 	for (int i = 0; i < 5; i++)
 	{
@@ -349,7 +372,7 @@ void drawButtonEffects()
 	}
 
 	return;
-
+	*/
 
 	for (int i = 0; i < 5; i++)
 	{
@@ -368,6 +391,17 @@ void drawButtonEffects()
 		for (int x = ledSegments[2 * i]; x <= ledSegments[2 * i + 1]; x++)
 		{
 			setPixel(x, CHSV(buttonCenterHue[i], 255, int(buttonPower[i] * 255)));
+
+			// occasional sparkles
+			if (random(999) > 990)
+			{
+				setPixel(x, CHSV(buttonCenterHue[i], 255, 255));
+			}
+
+			if (buttonState[i] == 1 && random(999) > 980)
+			{
+				setPixel(x, CRGB(255, 255, 255));
+			}
 		}
 
 		/*
@@ -408,18 +442,13 @@ void loop()
 	}
 
 	checkButtons(regularUpdate);
-
+	
 	drawBackground();
-	drawButtonEffects();
 
-	// draw red test pixel that zooms around ring
-	setPixel(testPixel, CRGB(200, 0, 0));
-	testPixelCounter += dt;
-	if (testPixelCounter > 50) 
+
+	if (!win && !superWin)
 	{
-		testPixelCounter -= 50;
-		testPixel++;
-		if (testPixel >= NUM_LEDS2) testPixel = -NUM_LEDS1;
+		drawButtonEffects();
 	}
 
 
