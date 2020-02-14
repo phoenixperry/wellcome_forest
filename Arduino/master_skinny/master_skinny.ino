@@ -236,7 +236,6 @@ void readServerStateUntil() {
 }
 
 
-
 void loop() {
   readSlaveState();
   readServerStateUntil();
