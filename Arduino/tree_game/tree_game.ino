@@ -116,12 +116,11 @@ void loop() {
   /*** BEACON STATE ***/
   else if (tree.state == TreeState::beacon) {
     tree.while_not_pressed([] {
-      double speed = 0.007;
-      tree.hue = -sin(time * speed * global_speed) * 30 + 50;
-      tree.value = 220 + sin(time * speed * global_speed) * 35;
+      double speed = 0.02;
+      tree.hue = 240;
+      tree.value = 140 + sin(time * speed * global_speed) * 80;
       tree.saturation = 255;
     });
-    tree.on_pressed([] { send_state(tree); });
     tree.while_pressed([] {
       if (tree.hue > 20) {
         tree.hue -= 0.2;
@@ -129,7 +128,9 @@ void loop() {
         tree.reset_button();
         tree.state = TreeState::pressed_beacon;
       }
+      tree.button_was_pressed = false;
     });
+    tree.on_pressed([] { send_state(tree); });
     tree.show();
   }
   /*** PRESSED BEACON STATE ***/
@@ -142,9 +143,10 @@ void loop() {
 
   /*** WIN FOREST STATE ***/
   else if (tree.state == TreeState::win_forest) {
-    double speed = 0.007;
-    tree.hue = 135;
-    tree.saturation = 140 + 20 * sin(time * speed * global_speed);
+    double speed = 0.02;
+    double offset = 0.7 * (tree.id - 'C');
+    tree.hue = 120 + 40 * sin(time * speed * global_speed + offset);
+    tree.saturation = 140;
     tree.while_pressed([] { tree.button_was_pressed = false; });
     tree.on_pressed([] {});
     tree.show();
