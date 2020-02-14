@@ -28,8 +28,6 @@ void setup() {
   pinMode(BUTTON_OUT, OUTPUT);
   digitalWrite(BUTTON_OUT, HIGH);
   digitalWrite(BUTTON_LED, HIGH);
-  // set initial hue
-  send_state_timer.start(42, AsyncDelay::MILLIS);
 }
 
 void send_state(Tree tree) {
@@ -54,17 +52,11 @@ enum GameState { start, playing, won, lost };
 void loop() {
   time++;
 
-  if (send_state_timer.isExpired()) {
-    send_state(tree);
-    send_state_timer.repeat();
-  }
-
   /*** PARSE STATE TRANSITIONS ***/
   while (Serial1.available()) {
     String msg = Serial1.readStringUntil('\n');
     msg.trim();
     if (is_valid_msg(msg)) {
-      Serial.println("recieved valid message");
       int game_state = get_game_state(msg);
       int weather_state = get_weather_state(msg);
       // START signal
@@ -90,10 +82,6 @@ void loop() {
         tree.state = TreeState::win_global;
       }
     }
-    // else {
-    //   Serial.print("invalid message: ");
-    //   Serial.println(msg);
-    // }
   }
 
   /*** IDLE STATE ***/
@@ -102,14 +90,10 @@ void loop() {
     tree.hue = 100.0;
     tree.saturation = 150 + abs(sin(time * speed * global_speed)) * 50;
     tree.value = 255 - abs(cos(time * speed)) * 55;
-    tree.on_pressed([] { idle_delay.start(2000, AsyncDelay::MILLIS); });
     tree.while_pressed([] {
-      double speed = 0.01;
-      tree.value = 255 - abs(cos(time * speed * global_speed)) * 100;
-      if (idle_delay.isExpired()) {
-        tree.reset_button();
-      }
+      send_state(tree);
     });
+    tree.on_pressed([] {});
     tree.show();
   }
 
@@ -122,21 +106,16 @@ void loop() {
       tree.saturation = 255;
     });
     tree.while_pressed([] {
-      if (tree.hue > 20) {
-        tree.hue -= 0.2;
-      } else {
-        tree.reset_button();
-        tree.state = TreeState::pressed_beacon;
-      }
-      tree.button_was_pressed = false;
+      send_state(tree);
+      tree.hue = 30;
     });
-    tree.on_pressed([] { send_state(tree); });
+    tree.on_pressed([] { });
     tree.show();
   }
   /*** PRESSED BEACON STATE ***/
   else if (tree.state == TreeState::pressed_beacon) {
     tree.hue = 20;
-    tree.while_pressed([] { tree.button_was_pressed = false; });
+    tree.while_pressed([] { send_state(tree); });
     tree.on_pressed([] {});
     tree.show();
   }
@@ -147,15 +126,17 @@ void loop() {
     double offset = 0.7 * (tree.id - 'C');
     tree.hue = 120 + 40 * sin(time * speed * global_speed + offset);
     tree.saturation = 140;
-    tree.while_pressed([] { tree.button_was_pressed = false; });
+    tree.while_pressed([] { send_state(tree); });
     tree.on_pressed([] {});
     tree.show();
   }
   /*** WIN GLOBAL STATE ***/
   else if (tree.state == TreeState::win_global) {
-    tree.hue = 240;
-    tree.saturation = 170 - sin(time * 0.003 * global_speed) * 30;
-    tree.while_pressed([] { tree.button_was_pressed = false; });
+    double speed = 0.02;
+    tree.hue = (sin(time * speed) / 2 + 0.5) * 255;
+    tree.saturation = 180 - cos(time * speed * global_speed) * 60;
+    tree.value = 255;
+    tree.while_pressed([] {send_state(tree);});
     tree.on_pressed([] {});
     tree.show();
   }
@@ -163,7 +144,7 @@ void loop() {
   else if (tree.state == TreeState::waiting) {
     tree.hue = 100;
     tree.saturation = 240;
-    tree.while_pressed([] { tree.button_was_pressed = false; });
+    tree.while_pressed([] {send_state(tree);});
     tree.on_pressed([] {});
     tree.show();
   }
@@ -174,7 +155,7 @@ void loop() {
     tree.saturation = 240;
     tree.value = 200 - abs(cos(time * speed)) * 100;
     tree.show();
-    tree.while_pressed([] { tree.button_was_pressed = false; });
+    tree.while_pressed([] {send_state(tree); });
     tree.on_pressed([] {});
   }
 }
