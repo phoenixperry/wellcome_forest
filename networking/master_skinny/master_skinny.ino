@@ -58,6 +58,7 @@ bool t8_button_pressed = false;
 int hut_state = 0;  // idle/playing/win/lose (0,1,2,3)
 int hut_buttons[5] = {false, false, false, false,false};
 
+
 void setup() {
   //Begin serial monitor port - this is the cable.
   Serial.begin(9600);
@@ -69,7 +70,7 @@ void setup() {
   lastServerUpdate = millis();
 }
 
-void zeroTreeButtons(){
+void reset_everything() {
   t1_button_pressed = 0;
   t2_button_pressed = 0;
   t3_button_pressed = 0;
@@ -78,6 +79,14 @@ void zeroTreeButtons(){
   t6_button_pressed = 0;
   t7_button_pressed = 0;
   t8_button_pressed = 0;
+  t1_active = 0;
+  t2_active = 0;
+  t3_active = 0;
+  t4_active = 0;
+  t5_active = 0;
+  t6_active = 0;
+  t7_active = 0;
+  t8_active = 0;
 }
 
 void readSlaveState() {
@@ -88,14 +97,9 @@ void readSlaveState() {
     s.trim();  // trim that newline off
     int strSize = s.length();
 
+    Serial.println(s);
+
     // since the trees now only send on button press, we have to zero out the buttons as they never send a non-press
-    // zeroTreeButtons();
-    if(s.length() == 8) {
-      Serial.print(" --- ");
-      Serial.println(s);
-    } else {
-      Serial.println(s);
-    }
 
     // Check validity to ensure it's a Tree update. Could add additional check to see if s[1] is in CDEFGHIJ if needed.
     if ((strSize == 5) && (s.indexOf('{') == 0) && (s.indexOf('}') == 4)) {
@@ -145,7 +149,7 @@ void readSlaveState() {
       }
       
     // Check validity to see if it's a Hut update
-    } else if((strSize == 8) && s[1]=='K' && (s.indexOf('{') == 0) && (s.indexOf('}') == 5)){
+    } else if((strSize == 8) && s[1]=='B' && (s.indexOf('{') == 0) && (s.indexOf('}') == 5)){
       // Loop and update the hut buttons array. s[2] is first button.
       // Then tell the hut manager to update
       Serial.println("hut update");
@@ -208,6 +212,7 @@ void updateServer() {
   Serial.print(hut_buttons[3]);
   Serial.print(hut_buttons[4]);
   Serial.println("}");  
+
 }
 
 
@@ -217,6 +222,20 @@ void readServerStateUntil() {
   // {s0000} {tree state, trees beacon, hut state, weather state}
 
   // {trees beacon, trees state}
+  
+  // reset
+  if(
+    t1_button_pressed &&
+    t2_button_pressed &&
+    t3_button_pressed &&
+    t4_button_pressed &&
+    t5_button_pressed &&
+    t6_button_pressed &&
+    t7_button_pressed &&
+    t8_button_pressed
+  ) {
+    reset_everything();
+  }
 
   if (Serial.available()) {
     String msg = Serial.readStringUntil('\n');
@@ -226,11 +245,16 @@ void readServerStateUntil() {
         // update variables
         trees_state = msg[3]-'0';
         trees_current_beacon = 'C' + msg[1]-'0';
-        Serial.print(trees_state);
-        Serial.println(trees_current_beacon);
+
+        if(trees_state == 0 && trees_current_beacon == 'C') {
+          reset_everything();
+        }
+        // Serial.print(trees_state);
+        // Serial.println(trees_current_beacon);
         // hut_state = msg[4]-'0';
         // weather_state = msg[5]-'0';
-    } else {
+    }
+    else {
       Serial.flush();
       Serial1.flush();
     }
@@ -251,7 +275,7 @@ void loop() {
   }
   // update the server
   if ((currentTime - lastServerUpdate) > TIME_BETWEEN_SERVER_UPDATES) {
-    // updateServer();
+    updateServer();
     lastServerUpdate = currentTime;
   }  
 }
