@@ -10,6 +10,53 @@
 //           |                  |                          |                      |                    |
 // LEDPos: Button 3          Button 4                   Button 5               Button 2             Button 1
 
+//		light bluegreen 	bluepurple					purplepink				yellowgreen 		orange
+
+// spring: purple             yellow                    green                    aqua               pink
+
+// button 1 is button 3 
+
+
+/*
+Button mapping is messed up. so we're re-assigning stuff.
+Going around to the right from the outside.
+
+
+		   ButtonPos3
+		    -----
+		BP4/     \  ButtonPos2
+		  /       \ 
+strip 2	 |         | strip 1
+		  \       /
+		BP5\     / ButtonPos1
+		    -----
+		         A
+
+ButtonPos 1 on Pin:
+ButtonPos 2 on Pin:
+ButtonPos 3 on Pin:
+ButtonPos 4 on Pin:
+ButtonPos 5 on Pin:
+
+
+            BUTTONS
+\   \2/     \1/     \5/     \4/     \3/
+/ \ / \ / \ / \ / \ / \ / \ / \ / \ / \
+ 5   |   4   | A 3   |   2   |   1   | 
+           STRIP PARTS
+
+
+
+         BUTTONS
+\  \2/   \1/    \5/   \4/   \3/
+/ \/ \/ \/ \ / \/ \/ \/ \/ \/ \
+ 5  |  4  | A 3  |  2  |  1  | 
+           STRIP PARTS
+
+
+
+*/
+
 // The LEDPos is on the opposite side of the dome from where the actual button is. 
   
 
@@ -37,23 +84,28 @@ const int buttonPins[] = { 15, 16,17,18,19 };
 int buttonState[] = { 0,0,0,0,0 };
 float buttonPower[] = { 0,0,0,0,0 };
 
-const int ledsPerDomeSegment = 34; // 30 leds per meter, one segment is roughly 116 cm. tweak if necessary
-const int halfDomeSegment = 17; // 30 leds per meter, one segment is roughly 116 cm. tweak if necessary
 
-int buttonCenterHue[] = {20, 70, 130, 172, 200};
-int buttonCenterTargetHue[] = {20, 70, 130, 172, 200};
-int buttonCenterCurrentHue[] = {20, 70, 130, 172, 200};
-int buttonCenterHueSpring[] = {224, 130, 190, 64, 96};
-int buttonCenterHueRain[] = {160, 130, 140, 180, 150};
-int buttonCenterHueFall[] = {20, 50, 0, 230, 30};
-float hueFader = 0;
+/* standard colors / hue
+0 - lime green  75
+1 - dark green  110
+2 - blue / purple 180
+3 - yellow   64
+4 - orange   32
+*/
 
-int buttonCenterPixelPos[] = {
-	halfDomeSegment + 5 * ledsPerDomeSegment, 
-	halfDomeSegment + 3 * ledsPerDomeSegment,
-	- (halfDomeSegment + 2 * ledsPerDomeSegment),
-	- (halfDomeSegment),
-	halfDomeSegment + ledsPerDomeSegment};
+
+int buttonCenterHue[] = {75, 110, 180, 64, 32};
+
+int ledSegments[] = {
+   119, 190,  // segment for button 1
+    51, 118,  // segment for button 2
+   -17,  50,  // segment for button 3
+   -85, -18,  // segment for button 4
+  -150, -86   // segment for button 4
+};
+
+
+
 Bounce pushButtons[5];
 
 bool win = false;      // winning the hut game (i.e., all 5 buttons pressed at the same time. Game shows winning animation for winDuration milliseconds)
@@ -63,8 +115,8 @@ long timeWin = 0;
 
 String lastServerMessage = "";
 
-int winDuration = 5000; // ms
-int superWinDuration = 20000; // ms
+int winDuration = 60000; // ms
+int superWinDuration = 60000; // ms
 
 int dt = 0; // deltatime
 
@@ -79,6 +131,10 @@ const int FALL = 1;
 const int RAIN = 2;
 
 int weather = SPRING;
+
+int testPixel = 0;
+int testPixelCounter = 0;
+
 
 void setup() 
 {
@@ -155,16 +211,20 @@ void checkButtons(bool sendAnyway = false)
 			if (pushButtons[i].fallingEdge()) 
 			{
 				// button now pressed
-				buttonState[i] = 1;
-				Serial.print("Pressed button "); Serial.println(i);
+				
+				// new: invert button state!				
+				buttonState[i] = 1 - buttonState[i];
+				//buttonState[i] = 1;
+
+				Serial.print("Triggerd button "); Serial.print(i); Serial.print(" new state: "); Serial.println(buttonState[i]);
 				somethingChanged = true;
 			}
 			else if (pushButtons[i].risingEdge())
 			{
-				// button released
-				buttonState[i] = 0;
-				Serial.print("Released button "); Serial.println(i);
-				somethingChanged = true;
+				// button released, doesn't matter any more
+				//buttonState[i] = 0;
+				//Serial.print("Released button "); Serial.println(i);
+				//somethingChanged = true;
 			}
 		}
 		pressedCount += buttonState[i];
@@ -217,19 +277,6 @@ void checkXBee()
 	while (Serial1.available() > 0 && Serial1.peek() != '{') Serial1.read(); // discard the rest until the next '{'
 
 	weather = s[3] - 48;
-
-	if (weather >= 0 && weather <= 2)
-	{
-		// swap palette
-		for (int i = 0; i < 5; ++i)
-		{
-			if (weather == SPRING) buttonCenterTargetHue[i] = buttonCenterHueSpring[i];
-			if (weather == FALL) buttonCenterTargetHue[i] = buttonCenterHueFall[i];
-			if (weather == RAIN) buttonCenterTargetHue[i] = buttonCenterHueRain[i];
-			hueFader = 0;
-		}
-	}
-
 
 	if (weather == 3)
 	{
@@ -285,36 +332,27 @@ void drawSuperWin()
 
 void drawButtonEffects()
 {
-	int buttonsPressed = 0;
-	float decaySpeed = 3.0f;
-
-	if (hueFader < 1)
-	{
-		hueFader += dt / 1000.0;
-		if (hueFader >= 1)
-		{
-			hueFader = 1;
-			for (int i = 0; i < 5; ++i)
-			{
-				buttonCenterHue[i] = buttonCenterTargetHue[i];
-				buttonCenterCurrentHue[i] = buttonCenterHue[i];
-			}
-		}
-		else
-		{
-			for (int i = 0; i < 5; ++i)
-			{
-				int hue = buttonCenterHue[i] * hueFader + (1.0f - hueFader) * buttonCenterTargetHue[i];
-				if (hue > 255) hue = 255;
-				buttonCenterCurrentHue[i] = hue;
-			}
-		}
-	}
+	float decaySpeed = 4.0f;
 
 
 	for (int i = 0; i < 5; i++)
 	{
-		buttonsPressed += buttonState[i];
+		if (buttonState[i] == 1)
+		{
+			for (int j = 0; j <= i; j++)
+			{
+				setPixel(10 * i + j, CHSV(i * 30, 255, 200));
+
+			}
+
+		}
+	}
+
+	return;
+
+
+	for (int i = 0; i < 5; i++)
+	{
 		if (buttonState[i] == 1)
 		{
 			buttonPower[i] = buttonPower[i]*(1 + decaySpeed * dt/1000.0f) + decaySpeed * (dt / 1000.0f);
@@ -326,12 +364,20 @@ void drawButtonEffects()
 			buttonPower[i] *= (1 - decaySpeed * dt/1000.0f);
 			if (buttonPower[i] < 0.2f) buttonPower[i] = 0.2f;
 		}
+
+		for (int x = ledSegments[2 * i]; x <= ledSegments[2 * i + 1]; x++)
+		{
+			setPixel(x, CHSV(buttonCenterHue[i], 255, int(buttonPower[i] * 255)));
+		}
+
+		/*
 		for (int x = 0; x <= 36; x++)
 		{
 			float sineModifier = sin(millis() / 100.0f + buttonCenterPixelPos[i] / 10.0f) + 1;
-			setPixel(buttonCenterPixelPos[i] - x, CHSV(buttonCenterCurrentHue[i], 180 + x * sineModifier, int((180.0f + x * sineModifier)) * buttonPower[i]));
-			setPixel(buttonCenterPixelPos[i] + x, CHSV(buttonCenterCurrentHue[i], 180 + x * sineModifier, int((180.0f + x * sineModifier)) * buttonPower[i]));
+			setPixel(buttonCenterPixelPos[i] - x, CHSV(buttonCenterHue[i], 180 + x * sineModifier, int((180.0f + x * sineModifier)) * buttonPower[i]));
+			setPixel(buttonCenterPixelPos[i] + x, CHSV(buttonCenterHue[i], 180 + x * sineModifier, int((180.0f + x * sineModifier)) * buttonPower[i]));
 		}
+		*/
 	}
 
 
@@ -365,6 +411,18 @@ void loop()
 
 	drawBackground();
 	drawButtonEffects();
+
+	// draw red test pixel that zooms around ring
+	setPixel(testPixel, CRGB(200, 0, 0));
+	testPixelCounter += dt;
+	if (testPixelCounter > 50) 
+	{
+		testPixelCounter -= 50;
+		testPixel++;
+		if (testPixel >= NUM_LEDS2) testPixel = -NUM_LEDS1;
+	}
+
+
 
 	if (superWin)
 	{
