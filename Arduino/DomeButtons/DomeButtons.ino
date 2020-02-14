@@ -91,7 +91,8 @@ const int buttonPins[] = { 17,16,15,19,18 };
 int buttonState[] = { 0,0,0,0,0 };
 float buttonPower[] = { 0,0,0,0,0 };
 
-const int ringMap[] = {3, 0, 4, 2, 1}; // send a message to ringmap[i] to light up button i
+//const int ringMap[] = { 3, 0, 4, 2, 1 }; // send a message to ringmap[i] to light up button i
+const int ringMap[] = {4, 2, 3, 0, 1}; // send a message to ringmap[i] to light up button i
 
 /* standard colors / hue
 0 - lime green  75
@@ -204,8 +205,8 @@ void sendXbee()
 	// encode state in a number, each bit is one button
 	int state = buttonState[ringMap[0]] + buttonState[ringMap[1]] * 2 + buttonState[ringMap[2]] * 4 + buttonState[ringMap[3]] * 8 + buttonState[ringMap[4]] * 16;
 
-	if (win) state += 32;
-	if (superWin) state += 64;
+	//if (win) state += 32;
+	//if (superWin) state += 64;
 
 	// send this to Serial3 (pin 8), where an ESP8266 might be connected to control the rings
 	Serial3.write(state);
@@ -378,13 +379,14 @@ void drawButtonEffects()
 	{
 		if (buttonState[i] == 1)
 		{
-			buttonPower[i] = buttonPower[i]*(1 + decaySpeed * dt/1000.0f) + decaySpeed * (dt / 1000.0f);
+			buttonPower[i] = 1; //buttonPower[i]*(1 + decaySpeed * dt/1000.0f) + decaySpeed * (dt / 1000.0f);
 			if (buttonPower[i] >= 1) buttonPower[i] = 1;
 
 		}
 		else
 		{
-			buttonPower[i] *= (1 - decaySpeed * dt/1000.0f);
+			//buttonPower[i] *= (1 - decaySpeed * dt/1000.0f);
+			buttonPower[i] = 0.2f;
 			if (buttonPower[i] < 0.2f) buttonPower[i] = 0.2f;
 		}
 
