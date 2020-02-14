@@ -7,6 +7,9 @@ uint16_t time = 0; // timer used for animations
 AsyncDelay idle_delay;
 AsyncDelay send_state_timer;
 int global_speed = 1;
+int last_send;  // 
+int lastMasterUpdate;
+const int TIME_BETWEEN_UPDATES = 10; // just make sure we don't clutter the network too much when buttons are pressed
 
 /**
  * Tree object
@@ -31,20 +34,27 @@ void setup() {
 }
 
 void send_state(Tree tree) {
+
+  current_time = millis();
   bool local_win = tree.state == TreeState::beacon && tree.button_was_pressed ||
                    tree.state == TreeState::pressed_beacon;
-  Serial1.print("{");
-  Serial1.print(tree.id);
-  Serial1.print(local_win);
-  Serial1.print(tree.button_was_pressed);
-  Serial1.println("}");
-
-  // debugging
-  Serial.print("{");
-  Serial.print(tree.id);
-  Serial.print(local_win);
-  Serial.print(tree.button_was_pressed);
-  Serial.println("}");
+  if ((currentTime - lastMasterUpdate)  > TIME_BETWEEN_UPDATES) {
+    Serial1.print("{");
+    Serial1.print(tree.id);
+    Serial1.print(local_win);
+    Serial1.print(tree.button_was_pressed);
+    Serial1.println("}");
+  
+    // debugging
+    Serial.print("{");
+    Serial.print(tree.id);
+    Serial.print(local_win);
+    Serial.print(tree.button_was_pressed);
+    Serial.println("}");
+    
+    lastMasterUpdate = millis();
+    }
+  // throw the update away if the time between updates hasn't elapsed. 
 }
 
 enum GameState { start, playing, won, lost };
