@@ -131,7 +131,7 @@ int dt = 0; // deltatime
 
 long previousTime = 0;
 
-long regularUpdateTimer = 1000;
+long regularUpdateTimer = 100;
 
 int fps = 0;
 
@@ -392,17 +392,23 @@ void drawButtonEffects()
 
 		for (int x = ledSegments[2 * i]; x <= ledSegments[2 * i + 1]; x++)
 		{
-			setPixel(x, CHSV(buttonCenterHue[i], 255, int(buttonPower[i] * 255)));
-
-			// occasional sparkles
-			if (random(999) > 990)
+			if (buttonState[i] == 0)
 			{
-				setPixel(x, CHSV(buttonCenterHue[i], 255, 255));
+				setPixel(x, CHSV(buttonCenterHue[i], 255, int(10)));
+				// occasional sparkles
+				if (random(999) > 990)
+				{
+					setPixel(x, CHSV(buttonCenterHue[i], 255, 255));
+				}
 			}
-
-			if (buttonState[i] == 1 && random(999) > 980)
+			
+			else
 			{
-				setPixel(x, CRGB(255, 255, 255));
+					setPixel(x, CHSV(buttonCenterHue[i], 255, int(150)));
+				if (random(999) > 980)
+				{
+					setPixel(x, CRGB(255, 255, 255));
+				}
 			}
 		}
 
