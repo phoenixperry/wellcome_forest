@@ -136,7 +136,7 @@ void readSlaveState() {
       // Then tell the hut manager to update
       
       int button_count = 0;
-      for (i=0; i<5; i++){
+      for (int i=0; i<5; i++){
         int value = (s[i+2]-'0')
         hut_buttons[i] = value;
         button_count += value;
