@@ -92,7 +92,7 @@ int buttonState[] = { 0,0,0,0,0 };
 float buttonPower[] = { 0,0,0,0,0 };
 
 //const int ringMap[] = { 3, 0, 4, 2, 1 }; // send a message to ringmap[i] to light up button i
-const int ringMap[] = {4, 2, 3, 0, 1}; // send a message to ringmap[i] to light up button i
+const int ringMap[] = {3, 4, 1, 2, 0}; // send a message to ringmap[i] to light up button i
 
 /* standard colors / hue
 0 - lime green  75
@@ -124,8 +124,8 @@ long timeWin = 0;
 
 String lastServerMessage = "";
 
-int winDuration = 60000; // ms
-int superWinDuration = 60000; // ms
+int winDuration = 63000; // ms
+int superWinDuration = 73000; // ms
 
 int dt = 0; // deltatime
 
@@ -279,7 +279,7 @@ void checkXBee()
 
 	String s = Serial1.readStringUntil('}');
 
-	if (!s.equals(lastServerMessage))
+	if (!s.equals(lastServerMessage) && s.length() == 4)
 	{
 		Serial.print("Server message changed to: {Z"); Serial.print(s); Serial.println("}");
 		lastServerMessage = s;
@@ -429,6 +429,14 @@ void drawBackground()
 	nscale8(leds2, NUM_LEDS2, decay);
 }
 
+void resetButtons() {
+	for (int i = 0; i < 5; i++)
+	{
+		buttonState[i] = 0;
+		buttonPower[i] = 0;
+	}
+}
+
 void loop() 
 {
 	dt = millis() - previousTime;
@@ -447,6 +455,7 @@ void loop()
 	
 	drawBackground();
 
+	// Serial.print(win); Serial.print(superWin); Serial.println("");
 
 	if (!win && !superWin)
 	{
@@ -460,6 +469,7 @@ void loop()
 		if ((millis() - timeWin) < superWinDuration)
 		{
 			drawSuperWin();
+			resetButtons();
 		}
 		else
 		{
@@ -473,6 +483,7 @@ void loop()
 		if ((millis() - timeWin) < winDuration)
 		{
 			drawWin();
+			resetButtons();
 		}
 		else
 		{
