@@ -22,11 +22,14 @@ public:
 
   Tree(char tree_id) {
     id = tree_id;
-    state = is_initial_beacon() ? TreeState::beacon : TreeState::idle;
+    state = TreeState::idle;
     hue = is_initial_beacon() ? 20.0 : 100.0;
   };
   bool is_initial_beacon() { return id == 'C'; }
   void set_beacon_state(char new_beacon_id) {
+    if (id < new_beacon_id) {
+      state = TreeState::pressed_beacon;
+    }
     if (id == new_beacon_id) {
       state = TreeState::beacon;
     }
